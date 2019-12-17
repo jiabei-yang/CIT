@@ -32,4 +32,556 @@ data.used.cont.cont       <- data.used.full.cont.cont[1:800, ]
 # val.sample: used in EstIpw.CvMethod1, the order of the columns must be A, Y, X
 data.validation.cont.cont <- data.used.full.cont.cont[801:1000, ]  
 
+#####################################################################################################################
+###################################### True propensity score model, no honest #######################################
+#####################################################################################################################
+# In help document: Unit-specific propensity scores are not supported
+t0 <- Sys.time()
+tmp.propsc <- est.prop.sc(df.noy    = data.used.full.cont.cont[, !colnames(data.used.full.cont.cont) %in% c("Y")],
+                          method    = "GLM",
+                          form.true = "A ~ X1 + X2 + X3")
+tmp.propsc$prop.sc <- ifelse(data.used.full.cont.cont$A == 1, tmp.propsc$prop.sc, 1 - tmp.propsc$prop.sc)
 
+ct.propsc.true.nohonest <- causalTree(Y ~ X1 + X2 + X3 + X4 + X5 + X6, 
+                                      data         = data.used.full.cont.cont,
+                                      weights      = 1 / tmp.propsc$prop.sc,
+                                      treatment    = data.used.full.cont.cont$A,
+                                      split.Rule   = "CT", 
+                                      cv.option    = "CT", 
+                                      split.Honest = T, 
+                                      cv.Honest    = T, 
+                                      split.Bucket = F, 
+                                      xval         = 5, 
+                                      cp           = 0, 
+                                      minsize      = 20)
+cptable.propsc.true.nohonest <- ct.propsc.true.nohonest$cptable[,1][which.min(ct.propsc.true.nohonest$cptable[,4])]
+final.tree.propsc.true.nohonest <- prune(ct.propsc.true.nohonest, cptable.propsc.true.nohonest)
+t1 <- Sys.time()
+
+eval.ct.propsc.true.nohonest <- eval.measures.eff(final.tree   = final.tree.propsc.true.nohonest,
+                                                  test.data    = data.cont.cont$test.data,
+                                                  true.trt.eff = data.cont.cont$true.trt.eff,
+                                                  noise.var    = data.cont.cont$noise.var,
+                                                  corr.split   = data.cont.cont$corr.split,
+                                                  where.split  = data.cont.cont$where.split,
+                                                  dir.split    = data.cont.cont$dir.split)
+eval.ct.propsc.true.nohonest$t <- as.numeric(difftime(t1, t0, units = "secs"))
+eval.ct.propsc.true.nohonest$corr.frst.splt <- as.character(ct.propsc.true.nohonest$frame$var[1]) == data.cont.cont$corr.split
+# mean((predict(final.tree.propsc.true.nohonest, data.cont.cont$test.data) - data.cont.cont$true.trt.eff)^2)
+
+#####################################################################################################################
+################################### True propensity score model, honest Estimation ##################################
+#####################################################################################################################
+t0 <- Sys.time()
+tmp.propsc <- est.prop.sc(df.noy    = data.used.full.cont.cont[, !colnames(data.used.full.cont.cont) %in% c("Y")],
+                          method    = "GLM",
+                          form.true = "A ~ X1 + X2 + X3")
+tmp.propsc$prop.sc <- ifelse(data.used.full.cont.cont$A == 1, tmp.propsc$prop.sc, 1 - tmp.propsc$prop.sc)
+
+trtIdx  <- which(data.used.full.cont.cont$A == 1)
+ctrlIdx <- which(data.used.full.cont.cont$A == 0)
+train.idx <- c(sample(trtIdx, length(trtIdx) / 2),
+               sample(ctrlIdx, length(ctrlIdx) / 2))
+train.data <- data.used.full.cont.cont[train.idx, ]
+est.data   <- data.used.full.cont.cont[-train.idx, ]
+
+ct.propsc.true.honest <- honest.causalTree(Y ~ X1 + X2 + X3 + X4 + X5 + X6,
+                                           data = train.data,
+                                           weights = 1 / tmp.propsc$prop.sc[train.idx],
+                                           treatment = train.data$A,
+                                           est_data = est.data,
+                                           est_weights = 1 / tmp.propsc$prop.sc[-train.idx],
+                                           est_treatment = est.data$A,
+                                           split.Rule = "CT", 
+                                           split.Honest = T,
+                                           HonestSampleSize = nrow(est.data),
+                                           split.Bucket = F,
+                                           cv.option = "CT",
+                                           cv.Honest = T)
+cptable.propsc.true.honest <- ct.propsc.true.honest$cptable[,1][which.min(ct.propsc.true.honest$cptable[,4])]
+final.tree.propsc.true.honest <- prune(ct.propsc.true.honest, cptable.propsc.true.honest)
+t1 <- Sys.time()
+
+eval.ct.propsc.true.honest <- eval.measures.eff(final.tree   = final.tree.propsc.true.honest,
+                                                test.data    = data.cont.cont$test.data,
+                                                true.trt.eff = data.cont.cont$true.trt.eff,
+                                                noise.var    = data.cont.cont$noise.var,
+                                                corr.split   = data.cont.cont$corr.split,
+                                                where.split  = data.cont.cont$where.split,
+                                                dir.split    = data.cont.cont$dir.split)
+eval.ct.propsc.true.honest$t <- as.numeric(difftime(t1, t0, units = "secs"))
+eval.ct.propsc.true.honest$corr.frst.splt <- as.character(ct.propsc.true.honest$frame$var[1]) == data.cont.cont$corr.split
+# mean((predict(final.tree.propsc.true.honest, data.cont.cont$test.data) - data.cont.cont$true.trt.eff)^2)
+
+#####################################################################################################################
+###################################### Noisy propensity score model, no honest ######################################
+#####################################################################################################################
+t0 <- Sys.time()
+tmp.propsc <- est.prop.sc(df.noy    = data.used.full.cont.cont[, !colnames(data.used.full.cont.cont) %in% c("Y")],
+                          method    = "GLM",
+                          form.true = "A ~ exp(X1) + exp(X2) + exp(X3) + exp(X4) + exp(X5) + exp(X6)")
+tmp.propsc$prop.sc <- ifelse(data.used.full.cont.cont$A == 1, tmp.propsc$prop.sc, 1 - tmp.propsc$prop.sc)
+
+ct.propsc.nois.nohonest <- causalTree(Y ~ X1 + X2 + X3 + X4 + X5 + X6, 
+                                      data       = data.used.full.cont.cont,
+                                      weights    = 1 / tmp.propsc$prop.sc,
+                                      treatment  = data.used.full.cont.cont$A,
+                                      split.Rule = "CT", 
+                                      cv.option  = "CT", 
+                                      split.Honest = T, 
+                                      cv.Honest = T, 
+                                      split.Bucket = F, 
+                                      xval = 5, 
+                                      cp = 0, 
+                                      minsize = 20)
+
+cptable.propsc.nois.nohonest <- ct.propsc.nois.nohonest$cptable[,1][which.min(ct.propsc.nois.nohonest$cptable[,4])]
+final.tree.propsc.nois.nohonest <- prune(ct.propsc.nois.nohonest, cptable.propsc.nois.nohonest)
+t1 <- Sys.time()
+
+eval.ct.propsc.nois.nohonest <- eval.measures.eff(final.tree   = final.tree.propsc.nois.nohonest,
+                                                  test.data    = data.cont.cont$test.data,
+                                                  true.trt.eff = data.cont.cont$true.trt.eff,
+                                                  noise.var    = data.cont.cont$noise.var,
+                                                  corr.split   = data.cont.cont$corr.split,
+                                                  where.split  = data.cont.cont$where.split,
+                                                  dir.split    = data.cont.cont$dir.split)
+eval.ct.propsc.nois.nohonest$t <- as.numeric(difftime(t1, t0, units = "secs"))
+eval.ct.propsc.nois.nohonest$corr.frst.splt <- as.character(ct.propsc.nois.nohonest$frame$var[1]) == data.cont.cont$corr.split
+# mean((predict(final.tree.propsc.nois.nohonest, data.cont.cont$test.data) - data.cont.cont$true.trt.eff)^2)
+
+#####################################################################################################################
+################################### Noisy propensity score model, honest estimation #################################
+#####################################################################################################################
+t0 <- Sys.time()
+tmp.propsc <- est.prop.sc(df.noy    = data.used.full.cont.cont[, !colnames(data.used.full.cont.cont) %in% c("Y")],
+                          method    = "GLM",
+                          form.true = "A ~ exp(X1) + exp(X2) + exp(X3) + exp(X4) + exp(X5) + exp(X6)")
+tmp.propsc$prop.sc <- ifelse(data.used.full.cont.cont$A == 1, tmp.propsc$prop.sc, 1 - tmp.propsc$prop.sc)
+
+ct.propsc.nois.honest <- honest.causalTree(Y ~ X1 + X2 + X3 + X4 + X5 + X6,
+                                           data = train.data,
+                                           weights = 1 / tmp.propsc$prop.sc[train.idx],
+                                           treatment = train.data$A,
+                                           est_data = est.data,
+                                           est_weights = 1 / tmp.propsc$prop.sc[-train.idx],
+                                           est_treatment = est.data$A,
+                                           split.Rule = "CT", 
+                                           split.Honest = T,
+                                           HonestSampleSize = nrow(est.data),
+                                           split.Bucket = F,
+                                           cv.option = "CT",
+                                           cv.Honest = T)
+cptable.propsc.nois.honest <- ct.propsc.nois.honest$cptable[,1][which.min(ct.propsc.nois.honest$cptable[,4])]
+final.tree.propsc.nois.honest <- prune(ct.propsc.nois.honest, cptable.propsc.nois.honest)
+t1 <- Sys.time()
+
+eval.ct.propsc.nois.honest <- eval.measures.eff(final.tree   = final.tree.propsc.nois.honest,
+                                                test.data    = data.cont.cont$test.data,
+                                                true.trt.eff = data.cont.cont$true.trt.eff,
+                                                noise.var    = data.cont.cont$noise.var,
+                                                corr.split   = data.cont.cont$corr.split,
+                                                where.split  = data.cont.cont$where.split,
+                                                dir.split    = data.cont.cont$dir.split)
+eval.ct.propsc.nois.honest$t <- as.numeric(difftime(t1, t0, units = "secs"))
+eval.ct.propsc.nois.honest$corr.frst.splt <- as.character(ct.propsc.nois.honest$frame$var[1]) == data.cont.cont$corr.split
+# mse.propsc.nois.honest <- mean((predict(final.tree.propsc.nois.honest, data.cont.cont$test.data) - data.cont.cont$true.trt.eff)^2)
+
+#####################################################################################################################
+################################### Misspecified propensity score model, no honest ##################################
+#####################################################################################################################
+t0 <- Sys.time()
+tmp.propsc <- est.prop.sc(df.noy    = data.used.full.cont.cont[, !colnames(data.used.full.cont.cont) %in% c("Y")],
+                          method    = "GLM",
+                          form.true = "A ~ X1 + X3 + X4 + X5 + X6")
+tmp.propsc$prop.sc <- ifelse(data.used.full.cont.cont$A == 1, tmp.propsc$prop.sc, 1 - tmp.propsc$prop.sc)
+
+ct.propsc.mis.nohonest <- causalTree(Y ~ X1 + X2 + X3 + X4 + X5 + X6, 
+                                     data       = data.used.full.cont.cont,
+                                     weights    = 1 / tmp.propsc$prop.sc,
+                                     treatment  = data.used.full.cont.cont$A,
+                                     split.Rule = "CT", 
+                                     cv.option  = "CT", 
+                                     split.Honest = T, 
+                                     cv.Honest = T, 
+                                     split.Bucket = F, 
+                                     xval = 5, 
+                                     cp = 0, 
+                                     minsize = 20)
+
+cptable.propsc.mis.nohonest <- ct.propsc.mis.nohonest$cptable[,1][which.min(ct.propsc.mis.nohonest$cptable[,4])]
+final.tree.propsc.mis.nohonest <- prune(ct.propsc.mis.nohonest, cptable.propsc.mis.nohonest)
+t1 <- Sys.time()
+
+eval.ct.propsc.mis.nohonest <- eval.measures.eff(final.tree   = final.tree.propsc.mis.nohonest,
+                                                 test.data    = data.cont.cont$test.data,
+                                                 true.trt.eff = data.cont.cont$true.trt.eff,
+                                                 noise.var    = data.cont.cont$noise.var,
+                                                 corr.split   = data.cont.cont$corr.split,
+                                                 where.split  = data.cont.cont$where.split,
+                                                 dir.split    = data.cont.cont$dir.split)
+eval.ct.propsc.mis.nohonest$t <- as.numeric(difftime(t1, t0, units = "secs"))
+eval.ct.propsc.mis.nohonest$corr.frst.splt <- as.character(ct.propsc.mis.nohonest$frame$var[1]) == data.cont.cont$corr.split
+# mean((predict(final.tree.propsc.mis.nohonest, data.cont.cont$test.data) - data.cont.cont$true.trt.eff)^2)
+
+#####################################################################################################################
+############################## Misspecified propensity score model, honest estimation ###############################
+#####################################################################################################################
+t0 <- Sys.time()
+tmp.propsc <- est.prop.sc(df.noy    = data.used.full.cont.cont[, !colnames(data.used.full.cont.cont) %in% c("Y")],
+                          method    = "GLM",
+                          form.true = "A ~ X1 + X3 + X4 + X5 + X6")
+tmp.propsc$prop.sc <- ifelse(data.used.full.cont.cont$A == 1, tmp.propsc$prop.sc, 1 - tmp.propsc$prop.sc)
+
+ct.propsc.mis.honest <- honest.causalTree(Y ~ X1 + X2 + X3 + X4 + X5 + X6,
+                                          data = train.data,
+                                          weights = 1 / tmp.propsc$prop.sc[train.idx],
+                                          treatment = train.data$A,
+                                          est_data = est.data,
+                                          est_weights = 1 / tmp.propsc$prop.sc[-train.idx],
+                                          est_treatment = est.data$A,
+                                          split.Rule = "CT", 
+                                          split.Honest = T,
+                                          HonestSampleSize = nrow(est.data),
+                                          split.Bucket = F,
+                                          cv.option = "CT",
+                                          cv.Honest = T)
+cptable.propsc.mis.honest <- ct.propsc.mis.honest$cptable[,1][which.min(ct.propsc.mis.honest$cptable[,4])]
+final.tree.propsc.mis.honest <- prune(ct.propsc.mis.honest, cptable.propsc.mis.honest)
+t1 <- Sys.time()
+
+eval.ct.propsc.mis.honest <- eval.measures.eff(final.tree   = final.tree.propsc.mis.honest,
+                                               test.data    = data.cont.cont$test.data,
+                                               true.trt.eff = data.cont.cont$true.trt.eff,
+                                               noise.var    = data.cont.cont$noise.var,
+                                               corr.split   = data.cont.cont$corr.split,
+                                               where.split  = data.cont.cont$where.split,
+                                               dir.split    = data.cont.cont$dir.split)
+eval.ct.propsc.mis.honest$t <- as.numeric(difftime(t1, t0, units = "secs"))
+eval.ct.propsc.mis.honest$corr.frst.splt <- as.character(ct.propsc.mis.honest$frame$var[1]) == data.cont.cont$corr.split
+# mse.propsc.mis.honest <- mean((predict(final.tree.propsc.mis.honest, data.cont.cont$test.data) - data.cont.cont$true.trt.eff)^2)
+
+performance.hetero.ct <- list(true.nohonest = eval.ct.propsc.true.nohonest,
+                              true.honest   = eval.ct.propsc.true.honest,
+                              nois.nohonest = eval.ct.propsc.nois.nohonest,
+                              nois.honest   = eval.ct.propsc.nois.honest,
+                              mis.nohonest  = eval.ct.propsc.mis.nohonest,
+                              mis.honest    = eval.ct.propsc.mis.honest)
+
+#####################################################################################################################
+###################################### True propensity score model, no honest #######################################
+#####################################################################################################################
+# In help document: Unit-specific propensity scores are not supported
+t0 <- Sys.time()
+tmp.propsc <- est.prop.sc(df.noy    = data.used.full.cont.cont[, !colnames(data.used.full.cont.cont) %in% c("Y")],
+                          method    = "GLM",
+                          form.true = "A ~ X1 + X2 + X3")
+tmp.propsc$prop.sc <- ifelse(data.used.full.cont.cont$A == 1, tmp.propsc$prop.sc, 1 - tmp.propsc$prop.sc)
+
+ct.propsc.true.nohonest <- causalTree(Y ~ X1 + X2 + X3 + X4 + X5 + X6, 
+                                      data         = data.used.full.cont.cont,
+                                      weights      = 1 / tmp.propsc$prop.sc,
+                                      treatment    = data.used.full.cont.cont$A,
+                                      split.Rule   = "tstats", 
+                                      split.Honest = T, 
+                                      cv.option    = "matching", 
+                                      split.Bucket = F, 
+                                      xval         = 5, 
+                                      cp           = 0, 
+                                      minsize      = 20)
+cptable.propsc.true.nohonest <- ct.propsc.true.nohonest$cptable[,1][which.min(ct.propsc.true.nohonest$cptable[,4])]
+final.tree.propsc.true.nohonest <- prune(ct.propsc.true.nohonest, cptable.propsc.true.nohonest)
+t1 <- Sys.time()
+
+eval.ct.propsc.true.nohonest <- eval.measures.eff(final.tree   = final.tree.propsc.true.nohonest,
+                                                  test.data    = data.cont.cont$test.data,
+                                                  true.trt.eff = data.cont.cont$true.trt.eff,
+                                                  noise.var    = data.cont.cont$noise.var,
+                                                  corr.split   = data.cont.cont$corr.split,
+                                                  where.split  = data.cont.cont$where.split,
+                                                  dir.split    = data.cont.cont$dir.split)
+eval.ct.propsc.true.nohonest$t <- as.numeric(difftime(t1, t0, units = "secs"))
+eval.ct.propsc.true.nohonest$corr.frst.splt <- as.character(ct.propsc.true.nohonest$frame$var[1]) == data.cont.cont$corr.split
+# mean((predict(final.tree.propsc.true.nohonest, data.cont.cont$test.data) - data.cont.cont$true.trt.eff)^2)
+
+#####################################################################################################################
+################################### True propensity score model, honest Estimation ##################################
+#####################################################################################################################
+t0 <- Sys.time()
+tmp.propsc <- est.prop.sc(df.noy    = data.used.full.cont.cont[, !colnames(data.used.full.cont.cont) %in% c("Y")],
+                          method    = "GLM",
+                          form.true = "A ~ X1 + X2 + X3")
+tmp.propsc$prop.sc <- ifelse(data.used.full.cont.cont$A == 1, tmp.propsc$prop.sc, 1 - tmp.propsc$prop.sc)
+
+trtIdx  <- which(data.used.full.cont.cont$A == 1)
+ctrlIdx <- which(data.used.full.cont.cont$A == 0)
+train.idx <- c(sample(trtIdx, length(trtIdx) / 2),
+               sample(ctrlIdx, length(ctrlIdx) / 2))
+train.data <- data.used.full.cont.cont[train.idx, ]
+est.data   <- data.used.full.cont.cont[-train.idx, ]
+
+ct.propsc.true.honest <- honest.causalTree(Y ~ X1 + X2 + X3 + X4 + X5 + X6,
+                                           data             = train.data,
+                                           weights          = 1 / tmp.propsc$prop.sc[train.idx],
+                                           treatment        = train.data$A,
+                                           est_data         = est.data,
+                                           est_weights      = 1 / tmp.propsc$prop.sc[-train.idx],
+                                           est_treatment    = est.data$A,
+                                           split.Rule       = "tstats", 
+                                           split.Honest     = T,
+                                           HonestSampleSize = nrow(est.data),
+                                           split.Bucket     = F,
+                                           cv.option        = "matching")
+cptable.propsc.true.honest <- ct.propsc.true.honest$cptable[,1][which.min(ct.propsc.true.honest$cptable[,4])]
+final.tree.propsc.true.honest <- prune(ct.propsc.true.honest, cptable.propsc.true.honest)
+t1 <- Sys.time()
+
+eval.ct.propsc.true.honest <- eval.measures.eff(final.tree   = final.tree.propsc.true.honest,
+                                                test.data    = data.cont.cont$test.data,
+                                                true.trt.eff = data.cont.cont$true.trt.eff,
+                                                noise.var    = data.cont.cont$noise.var,
+                                                corr.split   = data.cont.cont$corr.split,
+                                                where.split  = data.cont.cont$where.split,
+                                                dir.split    = data.cont.cont$dir.split)
+eval.ct.propsc.true.honest$t <- as.numeric(difftime(t1, t0, units = "secs"))
+eval.ct.propsc.true.honest$corr.frst.splt <- as.character(ct.propsc.true.honest$frame$var[1]) == data.cont.cont$corr.split
+# mean((predict(final.tree.propsc.true.honest, data.cont.cont$test.data) - data.cont.cont$true.trt.eff)^2)
+
+#####################################################################################################################
+###################################### Noisy propensity score model, no honest ######################################
+#####################################################################################################################
+t0 <- Sys.time()
+tmp.propsc <- est.prop.sc(df.noy    = data.used.full.cont.cont[, !colnames(data.used.full.cont.cont) %in% c("Y")],
+                          method    = "GLM",
+                          form.true = "A ~ exp(X1) + exp(X2) + exp(X3) + exp(X4) + exp(X5) + exp(X6)")
+tmp.propsc$prop.sc <- ifelse(data.used.full.cont.cont$A == 1, tmp.propsc$prop.sc, 1 - tmp.propsc$prop.sc)
+
+ct.propsc.nois.nohonest <- causalTree(Y ~ X1 + X2 + X3 + X4 + X5 + X6, 
+                                      data         = data.used.full.cont.cont,
+                                      weights      = 1 / tmp.propsc$prop.sc,
+                                      treatment    = data.used.full.cont.cont$A,
+                                      split.Rule   = "tstats", 
+                                      cv.option    = "matching", 
+                                      split.Honest = T, 
+                                      split.Bucket = F, 
+                                      xval         = 5, 
+                                      cp           = 0, 
+                                      minsize      = 20)
+
+cptable.propsc.nois.nohonest <- ct.propsc.nois.nohonest$cptable[,1][which.min(ct.propsc.nois.nohonest$cptable[,4])]
+final.tree.propsc.nois.nohonest <- prune(ct.propsc.nois.nohonest, cptable.propsc.nois.nohonest)
+t1 <- Sys.time()
+
+eval.ct.propsc.nois.nohonest <- eval.measures.eff(final.tree   = final.tree.propsc.nois.nohonest,
+                                                  test.data    = data.cont.cont$test.data,
+                                                  true.trt.eff = data.cont.cont$true.trt.eff,
+                                                  noise.var    = data.cont.cont$noise.var,
+                                                  corr.split   = data.cont.cont$corr.split,
+                                                  where.split  = data.cont.cont$where.split,
+                                                  dir.split    = data.cont.cont$dir.split)
+eval.ct.propsc.nois.nohonest$t <- as.numeric(difftime(t1, t0, units = "secs"))
+eval.ct.propsc.nois.nohonest$corr.frst.splt <- as.character(ct.propsc.nois.nohonest$frame$var[1]) == data.cont.cont$corr.split
+# mean((predict(final.tree.propsc.nois.nohonest, data.cont.cont$test.data) - data.cont.cont$true.trt.eff)^2)
+
+#####################################################################################################################
+################################### Noisy propensity score model, honest estimation #################################
+#####################################################################################################################
+t0 <- Sys.time()
+tmp.propsc <- est.prop.sc(df.noy    = data.used.full.cont.cont[, !colnames(data.used.full.cont.cont) %in% c("Y")],
+                          method    = "GLM",
+                          form.true = "A ~ exp(X1) + exp(X2) + exp(X3) + exp(X4) + exp(X5) + exp(X6)")
+tmp.propsc$prop.sc <- ifelse(data.used.full.cont.cont$A == 1, tmp.propsc$prop.sc, 1 - tmp.propsc$prop.sc)
+
+ct.propsc.nois.honest <- honest.causalTree(Y ~ X1 + X2 + X3 + X4 + X5 + X6,
+                                           data             = train.data,
+                                           weights          = 1 / tmp.propsc$prop.sc[train.idx],
+                                           treatment        = train.data$A,
+                                           est_data         = est.data,
+                                           est_weights      = 1 / tmp.propsc$prop.sc[-train.idx],
+                                           est_treatment    = est.data$A,
+                                           split.Rule       = "tstats", 
+                                           split.Honest     = T,
+                                           HonestSampleSize = nrow(est.data),
+                                           split.Bucket     = F,
+                                           cv.option        = "matching")
+cptable.propsc.nois.honest <- ct.propsc.nois.honest$cptable[,1][which.min(ct.propsc.nois.honest$cptable[,4])]
+final.tree.propsc.nois.honest <- prune(ct.propsc.nois.honest, cptable.propsc.nois.honest)
+t1 <- Sys.time()
+
+eval.ct.propsc.nois.honest <- eval.measures.eff(final.tree   = final.tree.propsc.nois.honest,
+                                                test.data    = data.cont.cont$test.data,
+                                                true.trt.eff = data.cont.cont$true.trt.eff,
+                                                noise.var    = data.cont.cont$noise.var,
+                                                corr.split   = data.cont.cont$corr.split,
+                                                where.split  = data.cont.cont$where.split,
+                                                dir.split    = data.cont.cont$dir.split)
+eval.ct.propsc.nois.honest$t <- as.numeric(difftime(t1, t0, units = "secs"))
+eval.ct.propsc.nois.honest$corr.frst.splt <- as.character(ct.propsc.nois.honest$frame$var[1]) == data.cont.cont$corr.split
+# mse.propsc.nois.honest <- mean((predict(final.tree.propsc.nois.honest, data.cont.cont$test.data) - data.cont.cont$true.trt.eff)^2)
+
+#####################################################################################################################
+################################### Misspecified propensity score model, no honest ##################################
+#####################################################################################################################
+t0 <- Sys.time()
+tmp.propsc <- est.prop.sc(df.noy    = data.used.full.cont.cont[, !colnames(data.used.full.cont.cont) %in% c("Y")],
+                          method    = "GLM",
+                          form.true = "A ~ X1 + X3 + X4 + X5 + X6")
+tmp.propsc$prop.sc <- ifelse(data.used.full.cont.cont$A == 1, tmp.propsc$prop.sc, 1 - tmp.propsc$prop.sc)
+
+ct.propsc.mis.nohonest <- causalTree(Y ~ X1 + X2 + X3 + X4 + X5 + X6, 
+                                     data         = data.used.full.cont.cont,
+                                     weights      = 1 / tmp.propsc$prop.sc,
+                                     treatment    = data.used.full.cont.cont$A,
+                                     split.Rule   = "tstats", 
+                                     cv.option    = "matching", 
+                                     split.Honest = T, 
+                                     split.Bucket = F, 
+                                     xval         = 5, 
+                                     cp           = 0, 
+                                     minsize      = 20)
+
+cptable.propsc.mis.nohonest <- ct.propsc.mis.nohonest$cptable[,1][which.min(ct.propsc.mis.nohonest$cptable[,4])]
+final.tree.propsc.mis.nohonest <- prune(ct.propsc.mis.nohonest, cptable.propsc.mis.nohonest)
+t1 <- Sys.time()
+
+eval.ct.propsc.mis.nohonest <- eval.measures.eff(final.tree   = final.tree.propsc.mis.nohonest,
+                                                 test.data    = data.cont.cont$test.data,
+                                                 true.trt.eff = data.cont.cont$true.trt.eff,
+                                                 noise.var    = data.cont.cont$noise.var,
+                                                 corr.split   = data.cont.cont$corr.split,
+                                                 where.split  = data.cont.cont$where.split,
+                                                 dir.split    = data.cont.cont$dir.split)
+eval.ct.propsc.mis.nohonest$t <- as.numeric(difftime(t1, t0, units = "secs"))
+eval.ct.propsc.mis.nohonest$corr.frst.splt <- as.character(ct.propsc.mis.nohonest$frame$var[1]) == data.cont.cont$corr.split
+# mean((predict(final.tree.propsc.mis.nohonest, data.cont.cont$test.data) - data.cont.cont$true.trt.eff)^2)
+
+#####################################################################################################################
+############################## Misspecified propensity score model, honest estimation ###############################
+#####################################################################################################################
+t0 <- Sys.time()
+tmp.propsc <- est.prop.sc(df.noy    = data.used.full.cont.cont[, !colnames(data.used.full.cont.cont) %in% c("Y")],
+                          method    = "GLM",
+                          form.true = "A ~ X1 + X3 + X4 + X5 + X6")
+tmp.propsc$prop.sc <- ifelse(data.used.full.cont.cont$A == 1, tmp.propsc$prop.sc, 1 - tmp.propsc$prop.sc)
+
+ct.propsc.mis.honest <- honest.causalTree(Y ~ X1 + X2 + X3 + X4 + X5 + X6,
+                                          data             = train.data,
+                                          weights          = 1 / tmp.propsc$prop.sc[train.idx],
+                                          treatment        = train.data$A,
+                                          est_data         = est.data,
+                                          est_weights      = 1 / tmp.propsc$prop.sc[-train.idx],
+                                          est_treatment    = est.data$A,
+                                          split.Rule       = "tstats", 
+                                          split.Honest     = T,
+                                          HonestSampleSize = nrow(est.data),
+                                          split.Bucket     = F,
+                                          cv.option        = "matching")
+cptable.propsc.mis.honest <- ct.propsc.mis.honest$cptable[,1][which.min(ct.propsc.mis.honest$cptable[,4])]
+final.tree.propsc.mis.honest <- prune(ct.propsc.mis.honest, cptable.propsc.mis.honest)
+t1 <- Sys.time()
+
+eval.ct.propsc.mis.honest <- eval.measures.eff(final.tree   = final.tree.propsc.mis.honest,
+                                               test.data    = data.cont.cont$test.data,
+                                               true.trt.eff = data.cont.cont$true.trt.eff,
+                                               noise.var    = data.cont.cont$noise.var,
+                                               corr.split   = data.cont.cont$corr.split,
+                                               where.split  = data.cont.cont$where.split,
+                                               dir.split    = data.cont.cont$dir.split)
+eval.ct.propsc.mis.honest$t <- as.numeric(difftime(t1, t0, units = "secs"))
+eval.ct.propsc.mis.honest$corr.frst.splt <- as.character(ct.propsc.mis.honest$frame$var[1]) == data.cont.cont$corr.split
+# mse.propsc.mis.honest <- mean((predict(final.tree.propsc.mis.honest, data.cont.cont$test.data) - data.cont.cont$true.trt.eff)^2)
+
+performance.hetero.best.ct <- list(true.nohonest = eval.ct.propsc.true.nohonest,
+                                   true.honest   = eval.ct.propsc.true.honest,
+                                   nois.nohonest = eval.ct.propsc.nois.nohonest,
+                                   nois.honest   = eval.ct.propsc.nois.honest,
+                                   mis.nohonest  = eval.ct.propsc.mis.nohonest,
+                                   mis.honest    = eval.ct.propsc.mis.honest)
+
+#####################################################################################################################
+######################### 1. ipw: GLM Model, inside node, True propensity score model, cv1 ##########################
+#####################################################################################################################
+t0 <- Sys.time()
+seq.created.estipw.glm.propscinnd.true.cv1 <- create.sequence(data.used         = data.used.cont.cont,
+                                                              est.used          = "IPW",
+                                                              type.var          = "cont",
+                                                              propsc.mod.out    = F,
+                                                              propsc.mthd       = "GLM", 
+                                                              propsc.form.true  = "A ~ X1 + X2 + X3",
+                                                              w                 = NULL,
+                                                              propsc.mod.insplt = F,
+                                                              num.truc.obs      = 30,
+                                                              min.node          = 20)
+
+final.tree.estipw.glm.propscinnd.true.cv1 <- EstIpw.CvMethod1(data.used         = data.used.cont.cont, 
+                                                              tree.list         = seq.created.estipw.glm.propscinnd.true.cv1$tree.list, 
+                                                              lambda.used       = qchisq(0.95, 1), 
+                                                              val.sample        = data.validation.cont.cont, 
+                                                              type.var          = "cont",
+                                                              propsc.mod.out    = F, 
+                                                              propsc.mthd       = "GLM", 
+                                                              propsc.form.true  = "A ~ X1 + X2 + X3",
+                                                              val.w             = NULL,
+                                                              propsc.mod.insplt = F, 
+                                                              min.obs.mod       = 5)
+t1 <- Sys.time()
+
+eval.final.estipw.glm.propscinnd.true.cv1 <- eval.measures.eff(final.tree   = final.tree.estipw.glm.propscinnd.true.cv1[[1]], 
+                                                               test.data    = data.cont.cont$test.data,
+                                                               true.trt.eff = data.cont.cont$true.trt.eff,
+                                                               noise.var    = data.cont.cont$noise.var,
+                                                               corr.split   = data.cont.cont$corr.split,
+                                                               where.split  = data.cont.cont$where.split,
+                                                               dir.split    = data.cont.cont$dir.split)
+eval.final.estipw.glm.propscinnd.true.cv1$t <- as.numeric(difftime(t1, t0, units = "secs"))
+eval.final.estipw.glm.propscinnd.true.cv1$corr.frst.splt <- as.character(seq.created.estipw.glm.propscinnd.true.cv1$tree.list[[1]]$frame$var[1]) == data.cont.cont$corr.split
+print("1")
+
+#####################################################################################################################
+######################### 2. ipw: GLM Model, inside node, Noisy propensity score model, cv1 #########################
+#####################################################################################################################
+t0 <- Sys.time()
+seq.created.estipw.glm.propscinnd.nois.cv1 <- create.sequence(data.used         = data.used.cont.cont,
+                                                              est.used          = "IPW",
+                                                              type.var          = "cont",
+                                                              propsc.mod.out    = F,
+                                                              propsc.mthd       = "GLM", 
+                                                              propsc.form.true  = "A ~ exp(X1) + exp(X2) + exp(X3) + exp(X4) + exp(X5) + exp(X6)", 
+                                                              w                 = NULL, 
+                                                              propsc.mod.insplt = F,
+                                                              num.truc.obs      = 30,
+                                                              min.node          = 20)
+
+final.tree.estipw.glm.propscinnd.nois.cv1 <- EstIpw.CvMethod1(data.used         = data.used.cont.cont, 
+                                                              tree.list         = seq.created.estipw.glm.propscinnd.nois.cv1$tree.list, 
+                                                              lambda.used       = qchisq(0.95, 1), 
+                                                              val.sample        = data.validation.cont.cont, 
+                                                              type.var          = "cont",
+                                                              propsc.mod.out    = F, 
+                                                              propsc.mthd       = "GLM", 
+                                                              propsc.form.true  = "A ~ exp(X1) + exp(X2) + exp(X3) + exp(X4) + exp(X5) + exp(X6)", 
+                                                              val.w             = NULL,
+                                                              propsc.mod.insplt = F, 
+                                                              min.obs.mod       = 10)
+t1 <- Sys.time()
+
+eval.final.estipw.glm.propscinnd.nois.cv1 <- eval.measures.eff(final.tree   = final.tree.estipw.glm.propscinnd.nois.cv1[[1]], 
+                                                               test.data    = data.cont.cont$test.data,
+                                                               true.trt.eff = data.cont.cont$true.trt.eff,
+                                                               noise.var    = data.cont.cont$noise.var,
+                                                               corr.split   = data.cont.cont$corr.split,
+                                                               where.split  = data.cont.cont$where.split,
+                                                               dir.split    = data.cont.cont$dir.split)
+eval.final.estipw.glm.propscinnd.nois.cv1$t <- as.numeric(difftime(t1, t0, units = "secs"))
+eval.final.estipw.glm.propscinnd.nois.cv1$corr.frst.splt <- as.character(seq.created.estipw.glm.propscinnd.nois.cv1$tree.list[[1]]$frame$var[1]) == data.cont.cont$corr.split
+print("2")
+
+
+
+
+
+
+file.name = paste("../Data/CausalTreeFinal20191125/", toString(job.number), ".RData", sep = "")
+save(performance.homo.ct, performance.hetero.ct,
+     performance.homo.best.ct, performance.hetero.best.ct,
+     file = file.name)
