@@ -9,7 +9,8 @@ Code for paper "Tree Based Subgroup Identification for Observational Data".
   + `MainSimulationsDr.R`: run doubly robust interaction trees.
   
 * `Functions/`: functions to implement the Inverse Probability Weighting, G-computation, and Doubly Robust Interaction trees.
-  + `CvMethod1.R`: functions for final tree selection with different estimators. 
+  + `CvMethod1.R`: functions for the main final tree selection with different estimators. 
+  + `CvMethod2.R`: functions for the alternative final tree selection with different estimators. 
   + `EstCondEff.R`: `est.cond.eff()` fits the outcome model. `est.prop.sc()` fits the propensity score model.
   + `EstDrTempFunc.R`: splitting and evaluation functions for the doubly robust estimator.
   + `EstGTempFunc.R`: splitting and evaluation functions for the G-computation estimator.
@@ -25,7 +26,6 @@ Code for paper "Tree Based Subgroup Identification for Observational Data".
 * `Appendix/`: Additional code to run simulations in the appendices.
 
 * `Data/`: data for simulation results.
-  + `main.RData`: results for the main manuscript.
   
 * `Results/`: code to generate figures and tables in the paper.
   + `main.R`: Figure 1 and Table 1 in the main manuscript.
