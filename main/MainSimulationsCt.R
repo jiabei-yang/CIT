@@ -1,5 +1,5 @@
 job.number <- as.numeric(Sys.getenv("SLURM_ARRAY_TASK_ID"))
-load("seed1000.rda")
+load("../seed1000.rda")
 set.seed(a[job.number])
 
 setwd("..")
