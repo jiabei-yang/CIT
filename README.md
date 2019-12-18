@@ -1,4 +1,4 @@
-# Tree Based Subgroup Identification for Observational Data
+# Generalized Interaction Trees
 
 Code for paper "Tree Based Subgroup Identification for Observational Data".
 
