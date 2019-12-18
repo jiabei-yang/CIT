@@ -21,3 +21,12 @@ Code for paper "Tree Based Subgroup Identification for Observational Data".
   + `SimData.R`: generate data under different settings.
 
 * `seed1000.rda`: seeds for generating the data in simulations.
+
+* `Data/`: simulation results.
+  + `main.RData`: results in the main manuscript.
+  
+* `Results/`: code to generate figures and tables in the paper.
+  + `main.R`: Figure 1 and Table 1 in the main manuscript.
+  
+  
+  
