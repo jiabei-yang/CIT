@@ -20,7 +20,7 @@ res.select <- res.select %>%
 res.select <- res.select %>% 
   mutate(Algorithm = ifelse(est.mthd == "CT", "Best CT", NA)) %>%
   mutate(Algorithm = ifelse(est.mthd == "CT.default", "Original CT", Algorithm)) %>%
-  mutate(Algorithm = ifelse(grepl("CV1", Method), "Observational Data IT", Algorithm)) %>%
+  mutate(Algorithm = ifelse(grepl("CV1", Method), "Causal Interaction Trees", Algorithm)) %>%
   mutate(Method = ifelse(Method == "CT Misspecified.NoHonest", "Misspecified CT", Method)) %>%
   mutate(Method = ifelse(Method == "CT Noisy.NoHonest", "CT", Method)) %>%
   mutate(Method = ifelse(Method == "CT True.NoHonest", "True CT", Method)) %>%
@@ -53,6 +53,10 @@ levels(res.select$Method) <- c("Mis Cov CT", "Mis Func CT", "True CT",
                                "True Out Mis Func Prop DR", "Both True DR")
 res.select <- res.select %>%
   mutate(color.method = ifelse(est.mthd == "CT.default", "CT", as.character(est.mthd)))
+res.select <- res.select %>%
+  mutate(color.method = factor(color.method))
+res.select <- res.select %>%
+  mutate(color.method = factor(color.method, levels(res.select$color.method)[c(1, 4, 3, 2)]))
 
 cbbPalette <- c("#999999", "#E69F00", "#56B4E9", "#009E73", "#0072B2", "#D55E00", "#CC79A7", "#F0E442")
 

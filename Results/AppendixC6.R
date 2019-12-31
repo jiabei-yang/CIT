@@ -39,13 +39,19 @@ res.select <- res.select %>%
   # mutate(Method = factor(Method, levels(res.select$Method)[c(7, 5, 9, 6, 4, 8, 1, 3, 11, 10, 2)])) %>%
   mutate(setting = factor(setting, levels(res.select$setting)[c(2, 1)])) %>%
   mutate(Algorithm = factor(Algorithm, levels(res.select$Algorithm)[c(4, 2, 3, 1)]))
-res.select <- res.select %>%
-  mutate(color.method = ifelse(grepl("CT", est.mthd), "CT", as.character(est.mthd)))
+
 levels(res.select$Method) <- c("Mis Cov CT", "Mis Func CT", "True CT", 
                                "Mis Cov IPW", "Mis Func IPW", "True IPW",
                                "Mis Cov G", "Mis Func G", "True G",
                                "Both Mis Cov DR", "Both Mis Func DR", "True Prop Mis Func Out DR",
                                "True Out Mis Func Prop DR", "Both True DR")
+
+res.select <- res.select %>%
+  mutate(color.method = ifelse(grepl("CT", est.mthd), "CT", as.character(est.mthd)))
+res.select <- res.select %>%
+  mutate(color.method = factor(color.method))
+res.select <- res.select %>%
+  mutate(color.method = factor(color.method, levels(res.select$color.method)[c(1, 4, 3, 2)]))
 
 cbbPalette <- c("#999999", "#E69F00", "#56B4E9", "#009E73", "#0072B2", "#D55E00", "#CC79A7", "#F0E442")
 
@@ -58,7 +64,8 @@ ggplot(res.select, aes(Method, mse)) +
   scale_y_sqrt() +
   scale_colour_manual(values = cbbPalette, 
                       name = "Algorithms", 
-                      labels = c("CT", "IPW CAIT", "G CAIT", "DR CAIT")) + 
+                      labels = c("CT", "IPW", "G", "DR"),
+                      breaks = c("CT", "IPW", "G", "DR")) + 
   theme(legend.position = "bottom")  +
   ggtitle("Binary outcome with both continuous and categorical covariates")
 
