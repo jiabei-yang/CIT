@@ -32,6 +32,12 @@ data.used.cont.cont       <- data.used.full.cont.cont[1:800, ]
 # val.sample: used in EstIpw.CvMethod1, the order of the columns must be A, Y, X
 data.validation.cont.cont <- data.used.full.cont.cont[801:1000, ]  
 
+# Pretend X2 is unmeasured for unmeasured cov
+data.used.full.cont.cont.mis <- data.used.full.cont.cont %>%
+  select(-X2)
+test.data.mis <- data.cont.cont$test.data %>%
+  select(-X2)
+
 #####################################################################################################################
 ###################################### True propensity score model, no honest #######################################
 #####################################################################################################################
@@ -68,9 +74,10 @@ eval.ct.propsc.true.nohonest <- eval.measures.eff(final.tree   = final.tree.prop
 eval.ct.propsc.true.nohonest$t <- as.numeric(difftime(t1, t0, units = "secs"))
 eval.ct.propsc.true.nohonest$corr.frst.splt <- as.character(ct.propsc.true.nohonest$frame$var[1]) == data.cont.cont$corr.split
 # mean((predict(final.tree.propsc.true.nohonest, data.cont.cont$test.data) - data.cont.cont$true.trt.eff)^2)
+print("1")
 
 #####################################################################################################################
-###################################### Noisy propensity score model, no honest ######################################
+#################################### Mis Func propensity score model, no honest #####################################
 #####################################################################################################################
 t0 <- Sys.time()
 tmp.propsc <- est.prop.sc(df.noy    = data.used.full.cont.cont[, !colnames(data.used.full.cont.cont) %in% c("Y")],
@@ -105,20 +112,21 @@ eval.ct.propsc.nois.nohonest <- eval.measures.eff(final.tree   = final.tree.prop
 eval.ct.propsc.nois.nohonest$t <- as.numeric(difftime(t1, t0, units = "secs"))
 eval.ct.propsc.nois.nohonest$corr.frst.splt <- as.character(ct.propsc.nois.nohonest$frame$var[1]) == data.cont.cont$corr.split
 # mean((predict(final.tree.propsc.nois.nohonest, data.cont.cont$test.data) - data.cont.cont$true.trt.eff)^2)
+print("2")
 
 #####################################################################################################################
-################################### Misspecified propensity score model, no honest ##################################
+################################## Unmeasured cov propensity score model, no honest #################################
 #####################################################################################################################
 t0 <- Sys.time()
-tmp.propsc <- est.prop.sc(df.noy    = data.used.full.cont.cont[, !colnames(data.used.full.cont.cont) %in% c("Y")],
+tmp.propsc <- est.prop.sc(df.noy    = data.used.full.cont.cont.mis[, !colnames(data.used.full.cont.cont.mis) %in% c("Y")],
                           method    = "GLM",
                           form.true = "A ~ X1 + X3 + X4 + X5 + X6")
-tmp.propsc$prop.sc <- ifelse(data.used.full.cont.cont$A == 1, tmp.propsc$prop.sc, 1 - tmp.propsc$prop.sc)
+tmp.propsc$prop.sc <- ifelse(data.used.full.cont.cont.mis$A == 1, tmp.propsc$prop.sc, 1 - tmp.propsc$prop.sc)
 
-ct.propsc.mis.nohonest <- causalTree(Y ~ X1 + X2 + X3 + X4 + X5 + X6, 
-                                     data       = data.used.full.cont.cont,
+ct.propsc.mis.nohonest <- causalTree(Y ~ X1 + X3 + X4 + X5 + X6, 
+                                     data       = data.used.full.cont.cont.mis,
                                      weights    = 1 / tmp.propsc$prop.sc,
-                                     treatment  = data.used.full.cont.cont$A,
+                                     treatment  = data.used.full.cont.cont.mis$A,
                                      split.Rule = "CT", 
                                      cv.option  = "CT", 
                                      split.Honest = T, 
@@ -133,7 +141,7 @@ final.tree.propsc.mis.nohonest <- prune(ct.propsc.mis.nohonest, cptable.propsc.m
 t1 <- Sys.time()
 
 eval.ct.propsc.mis.nohonest <- eval.measures.eff(final.tree   = final.tree.propsc.mis.nohonest,
-                                                 test.data    = data.cont.cont$test.data,
+                                                 test.data    = test.data.mis,
                                                  true.trt.eff = data.cont.cont$true.trt.eff,
                                                  noise.var    = data.cont.cont$noise.var,
                                                  corr.split   = data.cont.cont$corr.split,
@@ -142,6 +150,7 @@ eval.ct.propsc.mis.nohonest <- eval.measures.eff(final.tree   = final.tree.props
 eval.ct.propsc.mis.nohonest$t <- as.numeric(difftime(t1, t0, units = "secs"))
 eval.ct.propsc.mis.nohonest$corr.frst.splt <- as.character(ct.propsc.mis.nohonest$frame$var[1]) == data.cont.cont$corr.split
 # mean((predict(final.tree.propsc.mis.nohonest, data.cont.cont$test.data) - data.cont.cont$true.trt.eff)^2)
+print("3")
 
 performance.hetero.ct <- list(true.nohonest = eval.ct.propsc.true.nohonest,
                               nois.nohonest = eval.ct.propsc.nois.nohonest,
@@ -182,9 +191,10 @@ eval.ct.propsc.true.nohonest <- eval.measures.eff(final.tree   = final.tree.prop
 eval.ct.propsc.true.nohonest$t <- as.numeric(difftime(t1, t0, units = "secs"))
 eval.ct.propsc.true.nohonest$corr.frst.splt <- as.character(ct.propsc.true.nohonest$frame$var[1]) == data.cont.cont$corr.split
 # mean((predict(final.tree.propsc.true.nohonest, data.cont.cont$test.data) - data.cont.cont$true.trt.eff)^2)
+print("4")
 
 #####################################################################################################################
-###################################### Noisy propensity score model, no honest ######################################
+#################################### Mis Func propensity score model, no honest #####################################
 #####################################################################################################################
 t0 <- Sys.time()
 tmp.propsc <- est.prop.sc(df.noy    = data.used.full.cont.cont[, !colnames(data.used.full.cont.cont) %in% c("Y")],
@@ -218,20 +228,21 @@ eval.ct.propsc.nois.nohonest <- eval.measures.eff(final.tree   = final.tree.prop
 eval.ct.propsc.nois.nohonest$t <- as.numeric(difftime(t1, t0, units = "secs"))
 eval.ct.propsc.nois.nohonest$corr.frst.splt <- as.character(ct.propsc.nois.nohonest$frame$var[1]) == data.cont.cont$corr.split
 # mean((predict(final.tree.propsc.nois.nohonest, data.cont.cont$test.data) - data.cont.cont$true.trt.eff)^2)
+print("5")
 
 #####################################################################################################################
-################################### Misspecified propensity score model, no honest ##################################
+################################# Unmeasured cov propensity score model, no honest ##################################
 #####################################################################################################################
 t0 <- Sys.time()
-tmp.propsc <- est.prop.sc(df.noy    = data.used.full.cont.cont[, !colnames(data.used.full.cont.cont) %in% c("Y")],
+tmp.propsc <- est.prop.sc(df.noy    = data.used.full.cont.cont.mis[, !colnames(data.used.full.cont.cont.mis) %in% c("Y")],
                           method    = "GLM",
                           form.true = "A ~ X1 + X3 + X4 + X5 + X6")
-tmp.propsc$prop.sc <- ifelse(data.used.full.cont.cont$A == 1, tmp.propsc$prop.sc, 1 - tmp.propsc$prop.sc)
+tmp.propsc$prop.sc <- ifelse(data.used.full.cont.cont.mis$A == 1, tmp.propsc$prop.sc, 1 - tmp.propsc$prop.sc)
 
-ct.propsc.mis.nohonest <- causalTree(Y ~ X1 + X2 + X3 + X4 + X5 + X6, 
-                                     data         = data.used.full.cont.cont,
+ct.propsc.mis.nohonest <- causalTree(Y ~ X1 + X3 + X4 + X5 + X6, 
+                                     data         = data.used.full.cont.cont.mis,
                                      weights      = 1 / tmp.propsc$prop.sc,
-                                     treatment    = data.used.full.cont.cont$A,
+                                     treatment    = data.used.full.cont.cont.mis$A,
                                      split.Rule   = "tstats", 
                                      cv.option    = "matching", 
                                      split.Honest = T, 
@@ -245,7 +256,7 @@ final.tree.propsc.mis.nohonest <- prune(ct.propsc.mis.nohonest, cptable.propsc.m
 t1 <- Sys.time()
 
 eval.ct.propsc.mis.nohonest <- eval.measures.eff(final.tree   = final.tree.propsc.mis.nohonest,
-                                                 test.data    = data.cont.cont$test.data,
+                                                 test.data    = test.data.mis,
                                                  true.trt.eff = data.cont.cont$true.trt.eff,
                                                  noise.var    = data.cont.cont$noise.var,
                                                  corr.split   = data.cont.cont$corr.split,
@@ -254,10 +265,11 @@ eval.ct.propsc.mis.nohonest <- eval.measures.eff(final.tree   = final.tree.props
 eval.ct.propsc.mis.nohonest$t <- as.numeric(difftime(t1, t0, units = "secs"))
 eval.ct.propsc.mis.nohonest$corr.frst.splt <- as.character(ct.propsc.mis.nohonest$frame$var[1]) == data.cont.cont$corr.split
 # mean((predict(final.tree.propsc.mis.nohonest, data.cont.cont$test.data) - data.cont.cont$true.trt.eff)^2)
+print("6")
 
-performance.hetero.best.ct <- list(true.nohonest = eval.ct.propsc.true.nohonest,
-                                   nois.nohonest = eval.ct.propsc.nois.nohonest,
-                                   mis.nohonest  = eval.ct.propsc.mis.nohonest)
+performance.hetero.ct.final <- list(true.nohonest = eval.ct.propsc.true.nohonest,
+                                    nois.nohonest = eval.ct.propsc.nois.nohonest,
+                                    mis.nohonest  = eval.ct.propsc.mis.nohonest)
 
 
 
@@ -271,6 +283,12 @@ data.used.full.cont.cont  <- data.cont.cont$data.used
 data.used.cont.cont       <- data.used.full.cont.cont[1:800, ]
 # val.sample: used in EstIpw.CvMethod1, the order of the columns must be A, Y, X
 data.validation.cont.cont <- data.used.full.cont.cont[801:1000, ]  
+
+# Pretend X2 is unmeasured for unmeasured cov
+data.used.full.cont.cont.mis <- data.used.full.cont.cont %>%
+  select(-X2)
+test.data.mis <- data.cont.cont$test.data %>%
+  select(-X2)
 
 #####################################################################################################################
 ###################################### True propensity score model, no honest #######################################
@@ -307,9 +325,10 @@ eval.ct.propsc.true.nohonest <- eval.measures.eff(final.tree   = final.tree.prop
                                                   dir.split    = data.cont.cont$dir.split)
 eval.ct.propsc.true.nohonest$t <- as.numeric(difftime(t1, t0, units = "secs"))
 # mean((predict(final.tree.propsc.true.nohonest, data.cont.cont$test.data) - data.cont.cont$true.trt.eff)^2)
+print("7")
 
 #####################################################################################################################
-##################################### Noisy propensity score model, no honest #######################################
+#################################### Mis Func propensity score model, no honest #####################################
 #####################################################################################################################
 t0 <- Sys.time()
 tmp.propsc <- est.prop.sc(df.noy    = data.used.full.cont.cont[, !colnames(data.used.full.cont.cont) %in% c("Y")],
@@ -343,20 +362,21 @@ eval.ct.propsc.nois.nohonest <- eval.measures.eff(final.tree   = final.tree.prop
                                                   dir.split    = data.cont.cont$dir.split)
 eval.ct.propsc.nois.nohonest$t <- as.numeric(difftime(t1, t0, units = "secs"))
 # mean((predict(final.tree.propsc.nois.nohonest, data.cont.cont$test.data) - data.cont.cont$true.trt.eff)^2)
+print("8")
 
 #####################################################################################################################
-################################## Misspecified propensity score model, no honest ###################################
+################################ Unmeasured cov propensity score model, no honest ###################################
 #####################################################################################################################
 t0 <- Sys.time()
-tmp.propsc <- est.prop.sc(df.noy    = data.used.full.cont.cont[, !colnames(data.used.full.cont.cont) %in% c("Y")],
+tmp.propsc <- est.prop.sc(df.noy    = data.used.full.cont.cont.mis[, !colnames(data.used.full.cont.cont.mis) %in% c("Y")],
                           method    = "GLM",
                           form.true = "A ~ X1 + X3 + X4 + X5 + X6")
-tmp.propsc$prop.sc <- ifelse(data.used.full.cont.cont$A == 1, tmp.propsc$prop.sc, 1 - tmp.propsc$prop.sc)
+tmp.propsc$prop.sc <- ifelse(data.used.full.cont.cont.mis$A == 1, tmp.propsc$prop.sc, 1 - tmp.propsc$prop.sc)
 
-ct.propsc.mis.nohonest <- causalTree(Y ~ X1 + X2 + X3 + X4 + X5 + X6, 
-                                     data       = data.used.full.cont.cont,
+ct.propsc.mis.nohonest <- causalTree(Y ~ X1 + X3 + X4 + X5 + X6, 
+                                     data       = data.used.full.cont.cont.mis,
                                      weights    = 1 / tmp.propsc$prop.sc,
-                                     treatment  = data.used.full.cont.cont$A,
+                                     treatment  = data.used.full.cont.cont.mis$A,
                                      split.Rule = "CT", 
                                      cv.option  = "CT", 
                                      split.Honest = T, 
@@ -371,7 +391,7 @@ final.tree.propsc.mis.nohonest <- prune(ct.propsc.mis.nohonest, cptable.propsc.m
 t1 <- Sys.time()
 
 eval.ct.propsc.mis.nohonest <- eval.measures.eff(final.tree   = final.tree.propsc.mis.nohonest,
-                                                 test.data    = data.cont.cont$test.data,
+                                                 test.data    = test.data.mis,
                                                  true.trt.eff = data.cont.cont$true.trt.eff,
                                                  noise.var    = data.cont.cont$noise.var,
                                                  corr.split   = data.cont.cont$corr.split,
@@ -379,6 +399,7 @@ eval.ct.propsc.mis.nohonest <- eval.measures.eff(final.tree   = final.tree.props
                                                  dir.split    = data.cont.cont$dir.split)
 eval.ct.propsc.mis.nohonest$t <- as.numeric(difftime(t1, t0, units = "secs"))
 # mean((predict(final.tree.propsc.mis.nohonest, data.cont.cont$test.data) - data.cont.cont$true.trt.eff)^2)
+print("9")
 
 performance.homo.ct <- list(true.nohonest = eval.ct.propsc.true.nohonest,
                             nois.nohonest = eval.ct.propsc.nois.nohonest,
@@ -418,9 +439,10 @@ eval.ct.propsc.true.nohonest <- eval.measures.eff(final.tree   = final.tree.prop
                                                   dir.split    = data.cont.cont$dir.split)
 eval.ct.propsc.true.nohonest$t <- as.numeric(difftime(t1, t0, units = "secs"))
 # mean((predict(final.tree.propsc.true.nohonest, data.cont.cont$test.data) - data.cont.cont$true.trt.eff)^2)
+print("10")
 
 #####################################################################################################################
-##################################### Noisy propensity score model, no honest #######################################
+##################################### Mis Func propensity score model, no honest ####################################
 #####################################################################################################################
 t0 <- Sys.time()
 tmp.propsc <- est.prop.sc(df.noy    = data.used.full.cont.cont[, !colnames(data.used.full.cont.cont) %in% c("Y")],
@@ -453,20 +475,21 @@ eval.ct.propsc.nois.nohonest <- eval.measures.eff(final.tree   = final.tree.prop
                                                   dir.split    = data.cont.cont$dir.split)
 eval.ct.propsc.nois.nohonest$t <- as.numeric(difftime(t1, t0, units = "secs"))
 # mean((predict(final.tree.propsc.nois.nohonest, data.cont.cont$test.data) - data.cont.cont$true.trt.eff)^2)
+print("11")
 
 #####################################################################################################################
-################################## Misspecified propensity score model, no honest ###################################
+################################## Unmeasured cov propensity score model, no honest #################################
 #####################################################################################################################
 t0 <- Sys.time()
-tmp.propsc <- est.prop.sc(df.noy    = data.used.full.cont.cont[, !colnames(data.used.full.cont.cont) %in% c("Y")],
+tmp.propsc <- est.prop.sc(df.noy    = data.used.full.cont.cont.mis[, !colnames(data.used.full.cont.cont.mis) %in% c("Y")],
                           method    = "GLM",
                           form.true = "A ~ X1 + X3 + X4 + X5 + X6")
-tmp.propsc$prop.sc <- ifelse(data.used.full.cont.cont$A == 1, tmp.propsc$prop.sc, 1 - tmp.propsc$prop.sc)
+tmp.propsc$prop.sc <- ifelse(data.used.full.cont.cont.mis$A == 1, tmp.propsc$prop.sc, 1 - tmp.propsc$prop.sc)
 
-ct.propsc.mis.nohonest <- causalTree(Y ~ X1 + X2 + X3 + X4 + X5 + X6, 
-                                     data         = data.used.full.cont.cont,
+ct.propsc.mis.nohonest <- causalTree(Y ~ X1 + X3 + X4 + X5 + X6, 
+                                     data         = data.used.full.cont.cont.mis,
                                      weights      = 1 / tmp.propsc$prop.sc,
-                                     treatment    = data.used.full.cont.cont$A,
+                                     treatment    = data.used.full.cont.cont.mis$A,
                                      split.Rule   = "tstats", 
                                      cv.option    = "matching", 
                                      split.Honest = T, 
@@ -480,7 +503,7 @@ final.tree.propsc.mis.nohonest <- prune(ct.propsc.mis.nohonest, cptable.propsc.m
 t1 <- Sys.time()
 
 eval.ct.propsc.mis.nohonest <- eval.measures.eff(final.tree   = final.tree.propsc.mis.nohonest,
-                                                 test.data    = data.cont.cont$test.data,
+                                                 test.data    = test.data.mis,
                                                  true.trt.eff = data.cont.cont$true.trt.eff,
                                                  noise.var    = data.cont.cont$noise.var,
                                                  corr.split   = data.cont.cont$corr.split,
@@ -488,8 +511,9 @@ eval.ct.propsc.mis.nohonest <- eval.measures.eff(final.tree   = final.tree.props
                                                  dir.split    = data.cont.cont$dir.split)
 eval.ct.propsc.mis.nohonest$t <- as.numeric(difftime(t1, t0, units = "secs"))
 # mean((predict(final.tree.propsc.mis.nohonest, data.cont.cont$test.data) - data.cont.cont$true.trt.eff)^2)
+print("12")
 
-performance.homo.best.ct <- list(true.nohonest = eval.ct.propsc.true.nohonest,
-                                 nois.nohonest = eval.ct.propsc.nois.nohonest,
-                                 mis.nohonest  = eval.ct.propsc.mis.nohonest)
+performance.homo.ct.final <- list(true.nohonest = eval.ct.propsc.true.nohonest,
+                                  nois.nohonest = eval.ct.propsc.nois.nohonest,
+                                  mis.nohonest  = eval.ct.propsc.mis.nohonest)
 

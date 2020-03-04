@@ -21,6 +21,16 @@ data.used.cont.cont       <- data.used.full.cont.cont[1:800, ]
 # val.sample: used in EstIpw.CvMethod1, the order of the columns must be A, Y, X
 data.validation.cont.cont <- data.used.full.cont.cont[801:1000, ]  
 
+# Pretend X2 is unmeasured for unmeasured cov
+data.used.full.cont.cont.mis <- data.used.full.cont.cont %>%
+  select(-X2)
+data.used.cont.cont.mis <- data.used.cont.cont %>%
+  select(-X2)
+data.validation.cont.cont.mis <- data.validation.cont.cont %>%
+  select(-X2)
+test.data.mis <- data.cont.cont$test.data %>%
+  select(-X2)
+
 #####################################################################################################################
 ######################### 1. ipw: GLM Model, inside node, True propensity score model, cv1 ##########################
 #####################################################################################################################
@@ -61,7 +71,7 @@ eval.final.estipw.glm.propscinnd.true.cv1$corr.frst.splt <- as.character(seq.cre
 print("1")
 
 #####################################################################################################################
-######################### 2. ipw: GLM Model, inside node, Noisy propensity score model, cv1 #########################
+####################### 2. ipw: GLM Model, inside node, Mis func propensity score model, cv1 ########################
 #####################################################################################################################
 t0 <- Sys.time()
 seq.created.estipw.glm.propscinnd.nois.cv1 <- create.sequence(data.used         = data.used.cont.cont,
@@ -100,10 +110,10 @@ eval.final.estipw.glm.propscinnd.nois.cv1$corr.frst.splt <- as.character(seq.cre
 print("2")
 
 #####################################################################################################################
-##################### 3. ipw: GLM Model, inside node, Misspecified propensity score model, cv1 ######################
+#################### 3. ipw: GLM Model, inside node, Unmeasured cov propensity score model, cv1 #####################
 #####################################################################################################################
 t0 <- Sys.time()
-seq.created.estipw.glm.propscinnd.mis.cv1 <- create.sequence(data.used         = data.used.cont.cont,
+seq.created.estipw.glm.propscinnd.mis.cv1 <- create.sequence(data.used         = data.used.cont.cont.mis,
                                                              est.used          = "IPW",
                                                              type.var          = "cont",
                                                              propsc.mod.out    = F,
@@ -114,10 +124,10 @@ seq.created.estipw.glm.propscinnd.mis.cv1 <- create.sequence(data.used         =
                                                              num.truc.obs      = 30,
                                                              min.node          = 20)
 
-final.tree.estipw.glm.propscinnd.mis.cv1 <- EstIpw.CvMethod1(data.used         = data.used.cont.cont, 
+final.tree.estipw.glm.propscinnd.mis.cv1 <- EstIpw.CvMethod1(data.used         = data.used.cont.cont.mis, 
                                                              tree.list         = seq.created.estipw.glm.propscinnd.mis.cv1$tree.list, 
                                                              lambda.used       = qchisq(0.95, 1), 
-                                                             val.sample        = data.validation.cont.cont, 
+                                                             val.sample        = data.validation.cont.cont.mis, 
                                                              type.var          = "cont",
                                                              propsc.mod.out    = F, 
                                                              propsc.mthd       = "GLM", 
@@ -128,7 +138,7 @@ final.tree.estipw.glm.propscinnd.mis.cv1 <- EstIpw.CvMethod1(data.used         =
 t1 <- Sys.time()
 
 eval.final.estipw.glm.propscinnd.mis.cv1 <- eval.measures.eff(final.tree   = final.tree.estipw.glm.propscinnd.mis.cv1[[1]], 
-                                                              test.data    = data.cont.cont$test.data,
+                                                              test.data    = test.data.mis,
                                                               true.trt.eff = data.cont.cont$true.trt.eff,
                                                               noise.var    = data.cont.cont$noise.var,
                                                               corr.split   = data.cont.cont$corr.split,
@@ -153,8 +163,18 @@ data.used.cont.cont       <- data.used.full.cont.cont[1:800, ]
 # val.sample: used in EstIpw.CvMethod1, the order of the columns must be A, Y, X
 data.validation.cont.cont <- data.used.full.cont.cont[801:1000, ]  
 
+# Pretend X2 is unmeasured for unmeasured cov
+data.used.full.cont.cont.mis <- data.used.full.cont.cont %>%
+  select(-X2)
+data.used.cont.cont.mis <- data.used.cont.cont %>%
+  select(-X2)
+data.validation.cont.cont.mis <- data.validation.cont.cont %>%
+  select(-X2)
+test.data.mis <- data.cont.cont$test.data %>%
+  select(-X2)
+
 #####################################################################################################################
-######################### 7. ipw: GLM Model, inside node, True propensity score model, cv1 ##########################
+######################### 4. ipw: GLM Model, inside node, True propensity score model, cv1 ##########################
 #####################################################################################################################
 t0 <- Sys.time()
 seq.created.estipw.glm.propscinnd.true.cv1 <- create.sequence(data.used         = data.used.cont.cont,
@@ -189,10 +209,10 @@ eval.final.estipw.glm.propscinnd.true.cv1 <- eval.measures.eff(final.tree   = fi
                                                                where.split  = data.cont.cont$where.split,
                                                                dir.split    = data.cont.cont$dir.split)
 eval.final.estipw.glm.propscinnd.true.cv1$t <- as.numeric(difftime(t1, t0, units = "secs"))
-print("7")
+print("4")
 
 #####################################################################################################################
-######################### 8. ipw: GLM Model, inside node, Noisy propensity score model, cv1 #########################
+####################### 5. ipw: GLM Model, inside node, Mis func propensity score model, cv1 ########################
 #####################################################################################################################
 t0 <- Sys.time()
 seq.created.estipw.glm.propscinnd.nois.cv1 <- create.sequence(data.used         = data.used.cont.cont,
@@ -227,13 +247,13 @@ eval.final.estipw.glm.propscinnd.nois.cv1 <- eval.measures.eff(final.tree   = fi
                                                                where.split  = data.cont.cont$where.split,
                                                                dir.split    = data.cont.cont$dir.split)
 eval.final.estipw.glm.propscinnd.nois.cv1$t <- as.numeric(difftime(t1, t0, units = "secs"))
-print("8")
+print("5")
 
 #####################################################################################################################
-##################### 9. ipw: GLM Model, inside node, Misspecified propensity score model, cv1 ######################
+#################### 6. ipw: GLM Model, inside node, Unmeasured cov propensity score model, cv1 #####################
 #####################################################################################################################
 t0 <- Sys.time()
-seq.created.estipw.glm.propscinnd.mis.cv1 <- create.sequence(data.used         = data.used.cont.cont,
+seq.created.estipw.glm.propscinnd.mis.cv1 <- create.sequence(data.used         = data.used.cont.cont.mis,
                                                              est.used          = "IPW",
                                                              type.var          = "cont",
                                                              propsc.mod.out    = F,
@@ -244,10 +264,10 @@ seq.created.estipw.glm.propscinnd.mis.cv1 <- create.sequence(data.used         =
                                                              num.truc.obs      = 30,
                                                              min.node          = 20)
 
-final.tree.estipw.glm.propscinnd.mis.cv1 <- EstIpw.CvMethod1(data.used         = data.used.cont.cont, 
+final.tree.estipw.glm.propscinnd.mis.cv1 <- EstIpw.CvMethod1(data.used         = data.used.cont.cont.mis, 
                                                              tree.list         = seq.created.estipw.glm.propscinnd.mis.cv1$tree.list, 
                                                              lambda.used       = qchisq(0.95, 1), 
-                                                             val.sample        = data.validation.cont.cont, 
+                                                             val.sample        = data.validation.cont.cont.mis, 
                                                              type.var          = "cont",
                                                              propsc.mod.out    = F, 
                                                              propsc.mthd       = "GLM", 
@@ -258,14 +278,14 @@ final.tree.estipw.glm.propscinnd.mis.cv1 <- EstIpw.CvMethod1(data.used         =
 t1 <- Sys.time()
 
 eval.final.estipw.glm.propscinnd.mis.cv1 <- eval.measures.eff(final.tree   = final.tree.estipw.glm.propscinnd.mis.cv1[[1]], 
-                                                              test.data    = data.cont.cont$test.data,
+                                                              test.data    = test.data.mis,
                                                               true.trt.eff = data.cont.cont$true.trt.eff,
                                                               noise.var    = data.cont.cont$noise.var,
                                                               corr.split   = data.cont.cont$corr.split,
                                                               where.split  = data.cont.cont$where.split,
                                                               dir.split    = data.cont.cont$dir.split)
 eval.final.estipw.glm.propscinnd.mis.cv1$t <- as.numeric(difftime(t1, t0, units = "secs"))
-print("9")
+print("6")
 
 performance.homo.ipw <- list(glm.propscinnd.true.cv1 = eval.final.estipw.glm.propscinnd.true.cv1,
                              glm.propscinnd.nois.cv1 = eval.final.estipw.glm.propscinnd.nois.cv1,

@@ -21,6 +21,16 @@ data.used.cont.cont       <- data.used.full.cont.cont[1:800, ]
 # val.sample: used in EstIpw.CvMethod1, the order of the columns must be A, Y, X
 data.validation.cont.cont <- data.used.full.cont.cont[801:1000, ]  
 
+# Pretend X2 is unmeasured for unmeasured cov
+data.used.full.cont.cont.mis <- data.used.full.cont.cont %>%
+  select(-X2)
+data.used.cont.cont.mis <- data.used.cont.cont %>%
+  select(-X2)
+data.validation.cont.cont.mis <- data.validation.cont.cont %>%
+  select(-X2)
+test.data.mis <- data.cont.cont$test.data %>%
+  select(-X2)
+
 #####################################################################################################################
 ######################### 1. ipw: GLM Model, outside node, True propensity score model, cv1 #########################
 #####################################################################################################################
@@ -61,7 +71,7 @@ eval.final.estipw.glm.propscout.true.cv1$corr.frst.splt <- as.character(seq.crea
 print("1")
 
 #####################################################################################################################
-######################### 2. ipw: GLM Model, outside node, Noisy propensity score model, cv1 ########################
+######################## 2. ipw: GLM Model, outside node, Mis func propensity score model, cv1 ######################
 #####################################################################################################################
 t0 <- Sys.time()
 seq.created.estipw.glm.propscout.nois.cv1 <- create.sequence(data.used         = data.used.cont.cont,
@@ -100,10 +110,10 @@ eval.final.estipw.glm.propscout.nois.cv1$corr.frst.splt <- as.character(seq.crea
 print("2")
 
 #####################################################################################################################
-##################### 3. ipw: GLM Model, outside node, Misspecified propensity score model, cv1 #####################
+##################### 3. ipw: GLM Model, outside node, Unmeasured cov propensity score model, cv1 ###################
 #####################################################################################################################
 t0 <- Sys.time()
-seq.created.estipw.glm.propscout.mis.cv1 <- create.sequence(data.used         = data.used.cont.cont,
+seq.created.estipw.glm.propscout.mis.cv1 <- create.sequence(data.used         = data.used.cont.cont.mis,
                                                             est.used          = "IPW",
                                                             type.var          = "cont",
                                                             propsc.mod.out    = T,
@@ -114,10 +124,10 @@ seq.created.estipw.glm.propscout.mis.cv1 <- create.sequence(data.used         = 
                                                             num.truc.obs      = 30,
                                                             min.node          = 20)
 
-final.tree.estipw.glm.propscout.mis.cv1 <- EstIpw.CvMethod1(data.used         = data.used.cont.cont, 
+final.tree.estipw.glm.propscout.mis.cv1 <- EstIpw.CvMethod1(data.used         = data.used.cont.cont.mis, 
                                                             tree.list         = seq.created.estipw.glm.propscout.mis.cv1$tree.list, 
                                                             lambda.used       = qchisq(0.95, 1), 
-                                                            val.sample        = data.validation.cont.cont, 
+                                                            val.sample        = data.validation.cont.cont.mis, 
                                                             type.var          = "cont",
                                                             propsc.mod.out    = T, 
                                                             propsc.mthd       = "GLM", 
@@ -128,7 +138,7 @@ final.tree.estipw.glm.propscout.mis.cv1 <- EstIpw.CvMethod1(data.used         = 
 t1 <- Sys.time()
 
 eval.final.estipw.glm.propscout.mis.cv1 <- eval.measures.eff(final.tree   = final.tree.estipw.glm.propscout.mis.cv1[[1]], 
-                                                             test.data    = data.cont.cont$test.data,
+                                                             test.data    = test.data.mis,
                                                              true.trt.eff = data.cont.cont$true.trt.eff,
                                                              noise.var    = data.cont.cont$noise.var,
                                                              corr.split   = data.cont.cont$corr.split,
@@ -176,7 +186,7 @@ eval.final.estipw.glm.propscout.true.cv2$corr.frst.splt <- as.character(seq.crea
 print("4")
 
 #####################################################################################################################
-######################### 5. ipw: GLM Model, outside node, Noisy propensity score model, Cv2 ########################
+####################### 5. ipw: GLM Model, outside node, Mis func propensity score model, Cv2 #######################
 #####################################################################################################################
 t0 <- Sys.time()
 seq.created.estipw.glm.propscout.nois.cv2 <- create.sequence(data.used         = data.used.full.cont.cont,
@@ -213,10 +223,10 @@ eval.final.estipw.glm.propscout.nois.cv2$corr.frst.splt <- as.character(seq.crea
 print("5")
 
 #####################################################################################################################
-###################### 6. ipw: GLM Model, outside node, Misspecified propensity score model, Cv2 ####################
+###################### 6. ipw: GLM Model, outside node, Unmeasured cov propensity score model, Cv2 ##################
 #####################################################################################################################
 t0 <- Sys.time()
-seq.created.estipw.glm.propscout.mis.cv2 <- create.sequence(data.used         = data.used.full.cont.cont,
+seq.created.estipw.glm.propscout.mis.cv2 <- create.sequence(data.used         = data.used.full.cont.cont.mis,
                                                             est.used          = "IPW",
                                                             type.var          = "cont",
                                                             propsc.mod.out    = T,
@@ -227,7 +237,7 @@ seq.created.estipw.glm.propscout.mis.cv2 <- create.sequence(data.used         = 
                                                             num.truc.obs      = 30,
                                                             min.node          = 20)
 
-final.tree.estipw.glm.propscout.mis.cv2 <- EstIpw.CvMethod2(data.used        = data.used.full.cont.cont,
+final.tree.estipw.glm.propscout.mis.cv2 <- EstIpw.CvMethod2(data.used        = data.used.full.cont.cont.mis,
                                                             tree.list        = seq.created.estipw.glm.propscout.mis.cv2$tree.list,
                                                             type.var         = "cont",
                                                             seed             = a[job.number],
@@ -239,7 +249,7 @@ final.tree.estipw.glm.propscout.mis.cv2 <- EstIpw.CvMethod2(data.used        = d
 t1 <- Sys.time()
 
 eval.final.estipw.glm.propscout.mis.cv2 <- eval.measures.eff(final.tree   = final.tree.estipw.glm.propscout.mis.cv2[[1]],
-                                                             test.data    = data.cont.cont$test.data,
+                                                             test.data    = test.data.mis,
                                                              true.trt.eff = data.cont.cont$true.trt.eff,
                                                              noise.var    = data.cont.cont$noise.var,
                                                              corr.split   = data.cont.cont$corr.split,
@@ -257,7 +267,7 @@ performance.hetero.ipw <- list(glm.propscout.true.cv1 = eval.final.estipw.glm.pr
                                glm.propscout.mis.cv2  = eval.final.estipw.glm.propscout.mis.cv2)
 
 #####################################################################################################################
-############################# 1. g: GLM Model, outside node, True adjustment model, cv1 #############################
+############################# 7. g: GLM Model, outside node, True adjustment model, cv1 #############################
 #####################################################################################################################
 t0 <- Sys.time()
 seq.created.estg.glm.modout.true.cv1 <- create.sequence(data.used         = data.used.cont.cont,
@@ -293,10 +303,10 @@ eval.final.estg.glm.modout.true.cv1 <- eval.measures.eff(final.tree   = final.tr
                                                          dir.split    = data.cont.cont$dir.split)
 eval.final.estg.glm.modout.true.cv1$t <- as.numeric(difftime(t1, t0, units = "secs"))
 eval.final.estg.glm.modout.true.cv1$corr.frst.splt <- as.character(seq.created.estg.glm.modout.true.cv1$tree.list[[1]]$frame$var[1]) == data.cont.cont$corr.split
-print("1")
+print("7")
 
 #####################################################################################################################
-############################# 2. g: GLM Model, outside node, Noisy adjustment model, cv1 ############################
+########################### 8. g: GLM Model, outside node, Mis func adjustment model, cv1 ###########################
 #####################################################################################################################
 t0 <- Sys.time()
 seq.created.estg.glm.modout.nois.cv1 <- create.sequence(data.used         = data.used.cont.cont,
@@ -332,13 +342,13 @@ eval.final.estg.glm.modout.nois.cv1 <- eval.measures.eff(final.tree   = final.tr
                                                          dir.split    = data.cont.cont$dir.split)
 eval.final.estg.glm.modout.nois.cv1$t <- as.numeric(difftime(t1, t0, units = "secs"))
 eval.final.estg.glm.modout.nois.cv1$corr.frst.splt <- as.character(seq.created.estg.glm.modout.nois.cv1$tree.list[[1]]$frame$var[1]) == data.cont.cont$corr.split
-print("2")
+print("8")
 
 #####################################################################################################################
-######################### 3. g: GLM Model, outside node, Misspecified adjustment model, cv1 #########################
+######################## 9. g: GLM Model, outside node, Unmeasured cov adjustment model, cv1 ########################
 #####################################################################################################################
 t0 <- Sys.time()
-seq.created.estg.glm.modout.mis.cv1 <- create.sequence(data.used         = data.used.cont.cont,
+seq.created.estg.glm.modout.mis.cv1 <- create.sequence(data.used         = data.used.cont.cont.mis,
                                                        est.used          = "G",
                                                        type.var          = "cont",
                                                        adj.mod.out       = T,
@@ -349,10 +359,10 @@ seq.created.estg.glm.modout.mis.cv1 <- create.sequence(data.used         = data.
                                                        num.truc.obs      = 15,
                                                        min.node          = 15)
 
-final.tree.estg.glm.modout.mis.cv1 <- EstG.CvMethod1(data.used         = data.used.cont.cont,
+final.tree.estg.glm.modout.mis.cv1 <- EstG.CvMethod1(data.used         = data.used.cont.cont.mis,
                                                      tree.list         = seq.created.estg.glm.modout.mis.cv1$tree.list,
                                                      lambda.used       = qchisq(0.95, 1),
-                                                     val.sample        = data.validation.cont.cont,              
+                                                     val.sample        = data.validation.cont.cont.mis,              
                                                      type.var          = "cont",
                                                      adj.mod.out       = T,
                                                      adj.mthd          = "GLM",
@@ -363,7 +373,7 @@ final.tree.estg.glm.modout.mis.cv1 <- EstG.CvMethod1(data.used         = data.us
 t1 <- Sys.time()
 
 eval.final.estg.glm.modout.mis.cv1 <- eval.measures.eff(final.tree   = final.tree.estg.glm.modout.mis.cv1[[1]],
-                                                        test.data    = data.cont.cont$test.data,
+                                                        test.data    = test.data.mis,
                                                         true.trt.eff = data.cont.cont$true.trt.eff,
                                                         noise.var    = data.cont.cont$noise.var,
                                                         corr.split   = data.cont.cont$corr.split,
@@ -371,10 +381,10 @@ eval.final.estg.glm.modout.mis.cv1 <- eval.measures.eff(final.tree   = final.tre
                                                         dir.split    = data.cont.cont$dir.split)
 eval.final.estg.glm.modout.mis.cv1$t <- as.numeric(difftime(t1, t0, units = "secs"))
 eval.final.estg.glm.modout.mis.cv1$corr.frst.splt <- as.character(seq.created.estg.glm.modout.mis.cv1$tree.list[[1]]$frame$var[1]) == data.cont.cont$corr.split
-print("3")
+print("9")
 
 #####################################################################################################################
-############################ 4. g: GLM Model, outside node, True adjustment model, Cv2 ##############################
+########################### 10. g: GLM Model, outside node, True adjustment model, Cv2 ##############################
 #####################################################################################################################
 t0 <- Sys.time()
 seq.created.estg.glm.modout.true.cv2 <- create.sequence(data.used         = data.used.full.cont.cont,
@@ -409,10 +419,10 @@ eval.final.estg.glm.modout.true.cv2 <- eval.measures.eff(final.tree   = final.tr
 
 eval.final.estg.glm.modout.true.cv2$t <- as.numeric(difftime(t1, t0, units = "secs"))
 eval.final.estg.glm.modout.true.cv2$corr.frst.splt <- as.character(seq.created.estg.glm.modout.true.cv2$tree.list[[1]]$frame$var[1]) == data.cont.cont$corr.split
-print("4")
+print("10")
 
 #####################################################################################################################
-############################ 5. g: GLM Model, outside node, Noisy adjustment model, Cv2 #############################
+########################## 11. g: GLM Model, outside node, Mis func adjustment model, Cv2 ###########################
 #####################################################################################################################
 t0 <- Sys.time()
 seq.created.estg.glm.modout.nois.cv2 <- create.sequence(data.used         = data.used.full.cont.cont,
@@ -447,13 +457,13 @@ eval.final.estg.glm.modout.nois.cv2 <- eval.measures.eff(final.tree   = final.tr
 
 eval.final.estg.glm.modout.nois.cv2$t <- as.numeric(difftime(t1, t0, units = "secs"))
 eval.final.estg.glm.modout.nois.cv2$corr.frst.splt <- as.character(seq.created.estg.glm.modout.nois.cv2$tree.list[[1]]$frame$var[1]) == data.cont.cont$corr.split
-print("5")
+print("11")
 
 #####################################################################################################################
-######################### 6. g: GLM Model, outside node, Misspecified adjustment model, Cv2 #########################
+####################### 12. g: GLM Model, outside node, Unmeasured cov adjustment model, Cv2 ########################
 #####################################################################################################################
 t0 <- Sys.time()
-seq.created.estg.glm.modout.mis.cv2 <- create.sequence(data.used         = data.used.full.cont.cont,
+seq.created.estg.glm.modout.mis.cv2 <- create.sequence(data.used         = data.used.full.cont.cont.mis,
                                                        est.used          = "G",
                                                        type.var          = "cont",
                                                        adj.mod.out       = T,
@@ -464,7 +474,7 @@ seq.created.estg.glm.modout.mis.cv2 <- create.sequence(data.used         = data.
                                                        num.truc.obs      = 15,
                                                        min.node          = 15)
 
-final.tree.estg.glm.modout.mis.cv2 <- EstG.CvMethod2(data.used         = data.used.full.cont.cont,
+final.tree.estg.glm.modout.mis.cv2 <- EstG.CvMethod2(data.used         = data.used.full.cont.cont.mis,
                                                      tree.list         = seq.created.estg.glm.modout.mis.cv2$tree.list,             
                                                      type.var          = "cont",
                                                      seed              = a[job.number],
@@ -476,7 +486,7 @@ final.tree.estg.glm.modout.mis.cv2 <- EstG.CvMethod2(data.used         = data.us
 t1 <- Sys.time()
 
 eval.final.estg.glm.modout.mis.cv2 <- eval.measures.eff(final.tree   = final.tree.estg.glm.modout.mis.cv2[[1]],
-                                                        test.data    = data.cont.cont$test.data,
+                                                        test.data    = test.data.mis,
                                                         true.trt.eff = data.cont.cont$true.trt.eff,
                                                         noise.var    = data.cont.cont$noise.var,
                                                         corr.split   = data.cont.cont$corr.split,
@@ -485,7 +495,7 @@ eval.final.estg.glm.modout.mis.cv2 <- eval.measures.eff(final.tree   = final.tre
 
 eval.final.estg.glm.modout.mis.cv2$t <- as.numeric(difftime(t1, t0, units = "secs"))
 eval.final.estg.glm.modout.mis.cv2$corr.frst.splt <- as.character(seq.created.estg.glm.modout.mis.cv2$tree.list[[1]]$frame$var[1]) == data.cont.cont$corr.split
-print("6")
+print("12")
 
 performance.hetero.g <- list(glm.modout.true.cv1 = eval.final.estg.glm.modout.true.cv1,
                              glm.modout.nois.cv1 = eval.final.estg.glm.modout.nois.cv1,
@@ -495,7 +505,7 @@ performance.hetero.g <- list(glm.modout.true.cv1 = eval.final.estg.glm.modout.tr
                              glm.modout.mis.cv2  = eval.final.estg.glm.modout.mis.cv2)
 
 #####################################################################################################################
-###################### 1. dr: True GLM Model outside, True propensity score model outside, Cv1 ######################
+###################### 13. dr: True GLM Model outside, True propensity score model outside, Cv1 #####################
 #####################################################################################################################
 t0 <- Sys.time()
 seq.created.estdr.adjTGlmOut.propscTGlmOut.cv1 <- create.sequence(data.used         = data.used.cont.cont,
@@ -537,10 +547,10 @@ eval.final.estdr.adjTGlmOut.propscTGlmOut.cv1 <- eval.measures.eff(final.tree   
                                                                    dir.split    = data.cont.cont$dir.split)
 eval.final.estdr.adjTGlmOut.propscTGlmOut.cv1$t <- as.numeric(difftime(t1, t0, units = "secs"))
 eval.final.estdr.adjTGlmOut.propscTGlmOut.cv1$corr.frst.splt <- as.character(seq.created.estdr.adjTGlmOut.propscTGlmOut.cv1$tree.list[[1]]$frame$var[1]) == data.cont.cont$corr.split
-print("1")
+print("13")
 
 #####################################################################################################################
-###################### 2. dr: True GLM Model outside, Noisy propensity score model outside, Cv1 #####################
+#################### 14. dr: True GLM Model outside, Mis func propensity score model outside, Cv1 ###################
 #####################################################################################################################
 t0 <- Sys.time()
 seq.created.estdr.adjTGlmOut.propscNoisGlmOut.cv1 <- create.sequence(data.used         = data.used.cont.cont,
@@ -582,10 +592,10 @@ eval.final.estdr.adjTGlmOut.propscNoisGlmOut.cv1 <- eval.measures.eff(final.tree
                                                                       dir.split    = data.cont.cont$dir.split)
 eval.final.estdr.adjTGlmOut.propscNoisGlmOut.cv1$t <- as.numeric(difftime(t1, t0, units = "secs"))
 eval.final.estdr.adjTGlmOut.propscNoisGlmOut.cv1$corr.frst.splt <- as.character(seq.created.estdr.adjTGlmOut.propscNoisGlmOut.cv1$tree.list[[1]]$frame$var[1]) == data.cont.cont$corr.split
-print("2")
+print("14")
 
 #####################################################################################################################
-###################### 4. dr: Noisy GLM Model outside, True propensity score model outside, Cv1 #####################
+#################### 15. dr: Mis func GLM Model outside, True propensity score model outside, Cv1 ###################
 #####################################################################################################################
 t0 <- Sys.time()
 seq.created.estdr.adjNoisGlmOut.propscTGlmOut.cv1 <- create.sequence(data.used         = data.used.cont.cont,
@@ -627,10 +637,10 @@ eval.final.estdr.adjNoisGlmOut.propscTGlmOut.cv1 <- eval.measures.eff(final.tree
                                                                       dir.split    = data.cont.cont$dir.split)
 eval.final.estdr.adjNoisGlmOut.propscTGlmOut.cv1$t <- as.numeric(difftime(t1, t0, units = "secs"))
 eval.final.estdr.adjNoisGlmOut.propscTGlmOut.cv1$corr.frst.splt <- as.character(seq.created.estdr.adjNoisGlmOut.propscTGlmOut.cv1$tree.list[[1]]$frame$var[1]) == data.cont.cont$corr.split
-print("4")
+print("15")
 
 #####################################################################################################################
-###################### 6. dr: Noisy GLM Model outside, Noisy propensity score model outside, Cv1 ####################
+################## 16. dr: Mis func GLM Model outside, Mis func propensity score model outside, Cv1 #################
 #####################################################################################################################
 t0 <- Sys.time()
 seq.created.estdr.adjNoisGlmOut.propscNoisGlmOut.cv1 <- create.sequence(data.used         = data.used.cont.cont,
@@ -672,13 +682,13 @@ eval.final.estdr.adjNoisGlmOut.propscNoisGlmOut.cv1 <- eval.measures.eff(final.t
                                                                          dir.split    = data.cont.cont$dir.split)
 eval.final.estdr.adjNoisGlmOut.propscNoisGlmOut.cv1$t <- as.numeric(difftime(t1, t0, units = "secs"))
 eval.final.estdr.adjNoisGlmOut.propscNoisGlmOut.cv1$corr.frst.splt <- as.character(seq.created.estdr.adjNoisGlmOut.propscNoisGlmOut.cv1$tree.list[[1]]$frame$var[1]) == data.cont.cont$corr.split
-print("6")
+print("16")
 
 #####################################################################################################################
-############## 9. dr: Misspecified GLM Model outside, Misspecified propensity score model outside, Cv1 ##############
+############ 17. dr: Unmeasured cov GLM Model outside, Unmeasured cov propensity score model outside, Cv1 ###########
 #####################################################################################################################
 t0 <- Sys.time()
-seq.created.estdr.adjFGlmOut.propscFGlmOut.cv1 <- create.sequence(data.used         = data.used.cont.cont,
+seq.created.estdr.adjFGlmOut.propscFGlmOut.cv1 <- create.sequence(data.used         = data.used.cont.cont.mis,
                                                                   est.used          = "DR",
                                                                   type.var          = "cont",
                                                                   propsc.mod.out    = T,
@@ -692,10 +702,10 @@ seq.created.estdr.adjFGlmOut.propscFGlmOut.cv1 <- create.sequence(data.used     
                                                                   num.truc.obs      = 30,
                                                                   min.node          = 20)
 
-final.tree.estdr.adjFGlmOut.propscFGlmOut.cv1 <- EstDr.CvMethod1(data.used         = data.used.cont.cont,
+final.tree.estdr.adjFGlmOut.propscFGlmOut.cv1 <- EstDr.CvMethod1(data.used         = data.used.cont.cont.mis,
                                                                  tree.list         = seq.created.estdr.adjFGlmOut.propscFGlmOut.cv1$tree.list, 
                                                                  lambda.used       = qchisq(0.95, 1),
-                                                                 val.sample        = data.validation.cont.cont,
+                                                                 val.sample        = data.validation.cont.cont.mis,
                                                                  type.var          = "cont",
                                                                  propsc.mod.out    = T,
                                                                  propsc.mthd       = "GLM",
@@ -709,7 +719,7 @@ final.tree.estdr.adjFGlmOut.propscFGlmOut.cv1 <- EstDr.CvMethod1(data.used      
 t1 <- Sys.time()
 
 eval.final.estdr.adjFGlmOut.propscFGlmOut.cv1 <- eval.measures.eff(final.tree   = final.tree.estdr.adjFGlmOut.propscFGlmOut.cv1[[1]],
-                                                                   test.data    = data.cont.cont$test.data,
+                                                                   test.data    = test.data.mis,
                                                                    true.trt.eff = data.cont.cont$true.trt.eff,
                                                                    noise.var    = data.cont.cont$noise.var,
                                                                    corr.split   = data.cont.cont$corr.split,
@@ -717,10 +727,10 @@ eval.final.estdr.adjFGlmOut.propscFGlmOut.cv1 <- eval.measures.eff(final.tree   
                                                                    dir.split    = data.cont.cont$dir.split)
 eval.final.estdr.adjFGlmOut.propscFGlmOut.cv1$t <- as.numeric(difftime(t1, t0, units = "secs"))
 eval.final.estdr.adjFGlmOut.propscFGlmOut.cv1$corr.frst.splt <- as.character(seq.created.estdr.adjFGlmOut.propscFGlmOut.cv1$tree.list[[1]]$frame$var[1]) == data.cont.cont$corr.split
-print("9")
+print("17")
 
 #####################################################################################################################
-###################### 10. dr: True GLM Model outside, True propensity score model outside, Cv2 #####################
+###################### 18. dr: True GLM Model outside, True propensity score model outside, Cv2 #####################
 #####################################################################################################################
 t0 <- Sys.time()
 seq.created.estdr.adjTGlmOut.propscTGlmOut.cv2 <- create.sequence(data.used         = data.used.full.cont.cont,
@@ -761,10 +771,10 @@ eval.final.estdr.adjTGlmOut.propscTGlmOut.cv2 <- eval.measures.eff(final.tree   
                                                                    dir.split    = data.cont.cont$dir.split)
 eval.final.estdr.adjTGlmOut.propscTGlmOut.cv2$t <- as.numeric(difftime(t1, t0, units = "secs"))
 eval.final.estdr.adjTGlmOut.propscTGlmOut.cv2$corr.frst.splt <- as.character(seq.created.estdr.adjTGlmOut.propscTGlmOut.cv2$tree.list[[1]]$frame$var[1]) == data.cont.cont$corr.split
-print("10")
+print("18")
 
 #####################################################################################################################
-###################### 11. dr: True GLM Model outside, Noisy propensity score model outside, Cv2 ####################
+#################### 19. dr: True GLM Model outside, Mis func propensity score model outside, Cv2 ###################
 #####################################################################################################################
 t0 <- Sys.time()
 seq.created.estdr.adjTGlmOut.propscNoisGlmOut.cv2 <- create.sequence(data.used         = data.used.full.cont.cont,
@@ -805,10 +815,10 @@ eval.final.estdr.adjTGlmOut.propscNoisGlmOut.cv2 <- eval.measures.eff(final.tree
                                                                       dir.split    = data.cont.cont$dir.split)
 eval.final.estdr.adjTGlmOut.propscNoisGlmOut.cv2$t <- as.numeric(difftime(t1, t0, units = "secs"))
 eval.final.estdr.adjTGlmOut.propscNoisGlmOut.cv2$corr.frst.splt <- as.character(seq.created.estdr.adjTGlmOut.propscNoisGlmOut.cv2$tree.list[[1]]$frame$var[1]) == data.cont.cont$corr.split
-print("11")
+print("19")
 
 #####################################################################################################################
-##################### 13. dr: Noisy GLM Model outside, True propensity score model outside, Cv2 #####################
+#################### 20. dr: Mis func GLM Model outside, True propensity score model outside, Cv2 ###################
 #####################################################################################################################
 t0 <- Sys.time()
 seq.created.estdr.adjNoisGlmOut.propscTGlmOut.cv2 <- create.sequence(data.used         = data.used.full.cont.cont,
@@ -849,10 +859,10 @@ eval.final.estdr.adjNoisGlmOut.propscTGlmOut.cv2 <- eval.measures.eff(final.tree
                                                                       dir.split    = data.cont.cont$dir.split)
 eval.final.estdr.adjNoisGlmOut.propscTGlmOut.cv2$t <- as.numeric(difftime(t1, t0, units = "secs"))
 eval.final.estdr.adjNoisGlmOut.propscTGlmOut.cv2$corr.frst.splt <- as.character(seq.created.estdr.adjNoisGlmOut.propscTGlmOut.cv2$tree.list[[1]]$frame$var[1]) == data.cont.cont$corr.split
-print("13")
+print("20")
 
 #####################################################################################################################
-#################### 15. dr: Noisy GLM Model outside, Noisy propensity score model outside, Cv2 #####################
+################# 21. dr: Mis func GLM Model outside, Mis func propensity score model outside, Cv2 ##################
 #####################################################################################################################
 t0 <- Sys.time()
 seq.created.estdr.adjNoisGlmOut.propscNoisGlmOut.cv2 <- create.sequence(data.used         = data.used.full.cont.cont,
@@ -893,13 +903,13 @@ eval.final.estdr.adjNoisGlmOut.propscNoisGlmOut.cv2 <- eval.measures.eff(final.t
                                                                          dir.split    = data.cont.cont$dir.split)
 eval.final.estdr.adjNoisGlmOut.propscNoisGlmOut.cv2$t <- as.numeric(difftime(t1, t0, units = "secs"))
 eval.final.estdr.adjNoisGlmOut.propscNoisGlmOut.cv2$corr.frst.splt <- as.character(seq.created.estdr.adjNoisGlmOut.propscNoisGlmOut.cv2$tree.list[[1]]$frame$var[1]) == data.cont.cont$corr.split
-print("15")
+print("21")
 
 #####################################################################################################################
-############# 18. dr: Misspecified GLM Model outside, Misspecified propensity score model outside, Cv2 ##############
+############ 22. dr: Unmeasured cov GLM Model outside, Unmeasured cov propensity score model outside, Cv2 ###########
 #####################################################################################################################
 t0 <- Sys.time()
-seq.created.estdr.adjFGlmOut.propscFGlmOut.cv2 <- create.sequence(data.used         = data.used.full.cont.cont,
+seq.created.estdr.adjFGlmOut.propscFGlmOut.cv2 <- create.sequence(data.used         = data.used.full.cont.cont.mis,
                                                                   est.used          = "DR",
                                                                   type.var          = "cont",
                                                                   propsc.mod.out    = T,
@@ -913,7 +923,7 @@ seq.created.estdr.adjFGlmOut.propscFGlmOut.cv2 <- create.sequence(data.used     
                                                                   num.truc.obs      = 30,
                                                                   min.node          = 20)
 
-final.tree.estdr.adjFGlmOut.propscFGlmOut.cv2 <- EstDr.CvMethod2(data.used         = data.used.full.cont.cont,
+final.tree.estdr.adjFGlmOut.propscFGlmOut.cv2 <- EstDr.CvMethod2(data.used         = data.used.full.cont.cont.mis,
                                                                  tree.list         = seq.created.estdr.adjFGlmOut.propscFGlmOut.cv2$tree.list,
                                                                  type.var          = "cont",
                                                                  seed              = a[job.number], 
@@ -929,7 +939,7 @@ final.tree.estdr.adjFGlmOut.propscFGlmOut.cv2 <- EstDr.CvMethod2(data.used      
 t1 <- Sys.time()
 
 eval.final.estdr.adjFGlmOut.propscFGlmOut.cv2 <- eval.measures.eff(final.tree   = final.tree.estdr.adjFGlmOut.propscFGlmOut.cv2[[1]],
-                                                                   test.data    = data.cont.cont$test.data,
+                                                                   test.data    = test.data.mis,
                                                                    true.trt.eff = data.cont.cont$true.trt.eff,
                                                                    noise.var    = data.cont.cont$noise.var,
                                                                    corr.split   = data.cont.cont$corr.split,
@@ -937,7 +947,7 @@ eval.final.estdr.adjFGlmOut.propscFGlmOut.cv2 <- eval.measures.eff(final.tree   
                                                                    dir.split    = data.cont.cont$dir.split)
 eval.final.estdr.adjFGlmOut.propscFGlmOut.cv2$t <- as.numeric(difftime(t1, t0, units = "secs"))
 eval.final.estdr.adjFGlmOut.propscFGlmOut.cv2$corr.frst.splt <- as.character(seq.created.estdr.adjFGlmOut.propscFGlmOut.cv2$tree.list[[1]]$frame$var[1]) == data.cont.cont$corr.split
-print("18")
+print("22")
 
 performance.hetero.drOut <- list(adjTGlmOut.propscTGlmOut.cv1       = eval.final.estdr.adjTGlmOut.propscTGlmOut.cv1,
                                  adjTGlmOut.propscNoisGlmOut.cv1    = eval.final.estdr.adjTGlmOut.propscNoisGlmOut.cv1,
@@ -961,8 +971,18 @@ data.used.cont.cont       <- data.used.full.cont.cont[1:800, ]
 # val.sample: used in EstIpw.CvMethod1, the order of the columns must be A, Y, X
 data.validation.cont.cont <- data.used.full.cont.cont[801:1000, ]  
 
+# Pretend X2 is unmeasured for unmeasured cov
+data.used.full.cont.cont.mis <- data.used.full.cont.cont %>%
+  select(-X2)
+data.used.cont.cont.mis <- data.used.cont.cont %>%
+  select(-X2)
+data.validation.cont.cont.mis <- data.validation.cont.cont %>%
+  select(-X2)
+test.data.mis <- data.cont.cont$test.data %>%
+  select(-X2)
+
 #####################################################################################################################
-######################### 7. ipw: GLM Model, outside node, True propensity score model, cv1 #########################
+######################### 23. ipw: GLM Model, outside node, True propensity score model, cv1 ########################
 #####################################################################################################################
 t0 <- Sys.time()
 seq.created.estipw.glm.propscout.true.cv1 <- create.sequence(data.used         = data.used.cont.cont,
@@ -997,10 +1017,10 @@ eval.final.estipw.glm.propscout.true.cv1 <- eval.measures.eff(final.tree   = fin
                                                               where.split  = data.cont.cont$where.split,
                                                               dir.split    = data.cont.cont$dir.split)
 eval.final.estipw.glm.propscout.true.cv1$t <- as.numeric(difftime(t1, t0, units = "secs"))
-print("7")
+print("23")
 
 #####################################################################################################################
-######################### 8. ipw: GLM Model, outside node, Noisy propensity score model, cv1 ########################
+####################### 24. ipw: GLM Model, outside node, Mis func propensity score model, cv1 ######################
 #####################################################################################################################
 t0 <- Sys.time()
 seq.created.estipw.glm.propscout.nois.cv1 <- create.sequence(data.used         = data.used.cont.cont,
@@ -1035,13 +1055,13 @@ eval.final.estipw.glm.propscout.nois.cv1 <- eval.measures.eff(final.tree   = fin
                                                               where.split  = data.cont.cont$where.split,
                                                               dir.split    = data.cont.cont$dir.split)
 eval.final.estipw.glm.propscout.nois.cv1$t <- as.numeric(difftime(t1, t0, units = "secs"))
-print("8")
+print("24")
 
 #####################################################################################################################
-##################### 9. ipw: GLM Model, outside node, Misspecified propensity score model, cv1 #####################
+#################### 25. ipw: GLM Model, outside node, Unmeasured cov propensity score model, cv1 ###################
 #####################################################################################################################
 t0 <- Sys.time()
-seq.created.estipw.glm.propscout.mis.cv1 <- create.sequence(data.used         = data.used.cont.cont,
+seq.created.estipw.glm.propscout.mis.cv1 <- create.sequence(data.used         = data.used.cont.cont.mis,
                                                             est.used          = "IPW",
                                                             type.var          = "cont",
                                                             propsc.mod.out    = T,
@@ -1052,10 +1072,10 @@ seq.created.estipw.glm.propscout.mis.cv1 <- create.sequence(data.used         = 
                                                             num.truc.obs      = 30,
                                                             min.node          = 20)
 
-final.tree.estipw.glm.propscout.mis.cv1 <- EstIpw.CvMethod1(data.used         = data.used.cont.cont, 
+final.tree.estipw.glm.propscout.mis.cv1 <- EstIpw.CvMethod1(data.used         = data.used.cont.cont.mis, 
                                                             tree.list         = seq.created.estipw.glm.propscout.mis.cv1$tree.list, 
                                                             lambda.used       = qchisq(0.95, 1), 
-                                                            val.sample        = data.validation.cont.cont, 
+                                                            val.sample        = data.validation.cont.cont.mis, 
                                                             type.var          = "cont",
                                                             propsc.mod.out    = T, 
                                                             propsc.mthd       = "GLM", 
@@ -1066,17 +1086,17 @@ final.tree.estipw.glm.propscout.mis.cv1 <- EstIpw.CvMethod1(data.used         = 
 t1 <- Sys.time()
 
 eval.final.estipw.glm.propscout.mis.cv1 <- eval.measures.eff(final.tree   = final.tree.estipw.glm.propscout.mis.cv1[[1]], 
-                                                             test.data    = data.cont.cont$test.data,
+                                                             test.data    = test.data.mis,
                                                              true.trt.eff = data.cont.cont$true.trt.eff,
                                                              noise.var    = data.cont.cont$noise.var,
                                                              corr.split   = data.cont.cont$corr.split,
                                                              where.split  = data.cont.cont$where.split,
                                                              dir.split    = data.cont.cont$dir.split)
 eval.final.estipw.glm.propscout.mis.cv1$t <- as.numeric(difftime(t1, t0, units = "secs"))
-print("9")
+print("25")
 
 #####################################################################################################################
-########################## 10. ipw: GLM Model, outside node, True propensity score model, Cv2 #######################
+########################## 26. ipw: GLM Model, outside node, True propensity score model, Cv2 #######################
 #####################################################################################################################
 t0 <- Sys.time()
 seq.created.estipw.glm.propscout.true.cv2 <- create.sequence(data.used         = data.used.full.cont.cont,
@@ -1109,10 +1129,10 @@ eval.final.estipw.glm.propscout.true.cv2 <- eval.measures.eff(final.tree   = fin
                                                               where.split  = data.cont.cont$where.split,
                                                               dir.split    = data.cont.cont$dir.split)
 eval.final.estipw.glm.propscout.true.cv2$t <- as.numeric(difftime(t1, t0, units = "secs"))
-print("10")
+print("26")
 
 #####################################################################################################################
-######################### 11. ipw: GLM Model, outside node, Noisy propensity score model, Cv2 #######################
+####################### 27. ipw: GLM Model, outside node, Mis func propensity score model, Cv2 ######################
 #####################################################################################################################
 t0 <- Sys.time()
 seq.created.estipw.glm.propscout.nois.cv2 <- create.sequence(data.used         = data.used.full.cont.cont,
@@ -1145,13 +1165,13 @@ eval.final.estipw.glm.propscout.nois.cv2 <- eval.measures.eff(final.tree   = fin
                                                               where.split  = data.cont.cont$where.split,
                                                               dir.split    = data.cont.cont$dir.split)
 eval.final.estipw.glm.propscout.nois.cv2$t <- as.numeric(difftime(t1, t0, units = "secs"))
-print("11")
+print("27")
 
 #####################################################################################################################
-##################### 12. ipw: GLM Model, outside node, Misspecified propensity score model, Cv2 ####################
+#################### 28. ipw: GLM Model, outside node, Unmeasured cov propensity score model, Cv2 ###################
 #####################################################################################################################
 t0 <- Sys.time()
-seq.created.estipw.glm.propscout.mis.cv2 <- create.sequence(data.used         = data.used.full.cont.cont,
+seq.created.estipw.glm.propscout.mis.cv2 <- create.sequence(data.used         = data.used.full.cont.cont.mis,
                                                             est.used          = "IPW",
                                                             type.var          = "cont",
                                                             propsc.mod.out    = T,
@@ -1162,7 +1182,7 @@ seq.created.estipw.glm.propscout.mis.cv2 <- create.sequence(data.used         = 
                                                             num.truc.obs      = 30,
                                                             min.node          = 20)
 
-final.tree.estipw.glm.propscout.mis.cv2 <- EstIpw.CvMethod2(data.used        = data.used.full.cont.cont,
+final.tree.estipw.glm.propscout.mis.cv2 <- EstIpw.CvMethod2(data.used        = data.used.full.cont.cont.mis,
                                                             tree.list        = seq.created.estipw.glm.propscout.mis.cv2$tree.list,
                                                             type.var         = "cont",
                                                             seed             = a[job.number],
@@ -1174,14 +1194,14 @@ final.tree.estipw.glm.propscout.mis.cv2 <- EstIpw.CvMethod2(data.used        = d
 t1 <- Sys.time()
 
 eval.final.estipw.glm.propscout.mis.cv2 <- eval.measures.eff(final.tree   = final.tree.estipw.glm.propscout.mis.cv2[[1]],
-                                                             test.data    = data.cont.cont$test.data,
+                                                             test.data    = test.data.mis,
                                                              true.trt.eff = data.cont.cont$true.trt.eff,
                                                              noise.var    = data.cont.cont$noise.var,
                                                              corr.split   = data.cont.cont$corr.split,
                                                              where.split  = data.cont.cont$where.split,
                                                              dir.split    = data.cont.cont$dir.split)
 eval.final.estipw.glm.propscout.mis.cv2$t <- as.numeric(difftime(t1, t0, units = "secs"))
-print("12")
+print("28")
 
 performance.homo.ipw <- list(glm.propscout.true.cv1 = eval.final.estipw.glm.propscout.true.cv1,
                              glm.propscout.nois.cv1 = eval.final.estipw.glm.propscout.nois.cv1,
@@ -1191,7 +1211,7 @@ performance.homo.ipw <- list(glm.propscout.true.cv1 = eval.final.estipw.glm.prop
                              glm.propscout.mis.cv2  = eval.final.estipw.glm.propscout.mis.cv2)
 
 #####################################################################################################################
-############################# 7. g: GLM Model, outside node, True adjustment model, cv1 #############################
+############################# 29. g: GLM Model, outside node, True adjustment model, cv1 ############################
 #####################################################################################################################
 t0 <- Sys.time()
 seq.created.estg.glm.modout.true.cv1 <- create.sequence(data.used         = data.used.cont.cont,
@@ -1226,10 +1246,10 @@ eval.final.estg.glm.modout.true.cv1 <- eval.measures.eff(final.tree   = final.tr
                                                          where.split  = data.cont.cont$where.split,
                                                          dir.split    = data.cont.cont$dir.split)
 eval.final.estg.glm.modout.true.cv1$t <- as.numeric(difftime(t1, t0, units = "secs"))
-print("7")
+print("29")
 
 #####################################################################################################################
-############################## 8. g: GLM Model, outside node, Noisy adjustment model, cv1 ###########################
+########################### 30. g: GLM Model, outside node, Mis func adjustment model, cv1 ##########################
 #####################################################################################################################
 t0 <- Sys.time()
 seq.created.estg.glm.modout.nois.cv1 <- create.sequence(data.used         = data.used.cont.cont,
@@ -1264,13 +1284,13 @@ eval.final.estg.glm.modout.nois.cv1 <- eval.measures.eff(final.tree   = final.tr
                                                          where.split  = data.cont.cont$where.split,
                                                          dir.split    = data.cont.cont$dir.split)
 eval.final.estg.glm.modout.nois.cv1$t <- as.numeric(difftime(t1, t0, units = "secs"))
-print("8")
+print("30")
 
 #####################################################################################################################
-######################### 9. g: GLM Model, outside node, Misspecified adjustment model, cv1 #########################
+######################## 31. g: GLM Model, outside node, Unmeasured cov adjustment model, cv1 #######################
 #####################################################################################################################
 t0 <- Sys.time()
-seq.created.estg.glm.modout.mis.cv1 <- create.sequence(data.used         = data.used.cont.cont,
+seq.created.estg.glm.modout.mis.cv1 <- create.sequence(data.used         = data.used.cont.cont.mis,
                                                        est.used          = "G",
                                                        type.var          = "cont",
                                                        adj.mod.out       = T,
@@ -1281,10 +1301,10 @@ seq.created.estg.glm.modout.mis.cv1 <- create.sequence(data.used         = data.
                                                        num.truc.obs      = 15,
                                                        min.node          = 15)
 
-final.tree.estg.glm.modout.mis.cv1 <- EstG.CvMethod1(data.used         = data.used.cont.cont,
+final.tree.estg.glm.modout.mis.cv1 <- EstG.CvMethod1(data.used         = data.used.cont.cont.mis,
                                                      tree.list         = seq.created.estg.glm.modout.mis.cv1$tree.list,
                                                      lambda.used       = qchisq(0.95, 1),
-                                                     val.sample        = data.validation.cont.cont,              
+                                                     val.sample        = data.validation.cont.cont.mis,              
                                                      type.var          = "cont",
                                                      adj.mod.out       = T,
                                                      adj.mthd          = "GLM",
@@ -1295,17 +1315,17 @@ final.tree.estg.glm.modout.mis.cv1 <- EstG.CvMethod1(data.used         = data.us
 t1 <- Sys.time()
 
 eval.final.estg.glm.modout.mis.cv1 <- eval.measures.eff(final.tree   = final.tree.estg.glm.modout.mis.cv1[[1]],
-                                                        test.data    = data.cont.cont$test.data,
+                                                        test.data    = test.data.mis,
                                                         true.trt.eff = data.cont.cont$true.trt.eff,
                                                         noise.var    = data.cont.cont$noise.var,
                                                         corr.split   = data.cont.cont$corr.split,
                                                         where.split  = data.cont.cont$where.split,
                                                         dir.split    = data.cont.cont$dir.split)
 eval.final.estg.glm.modout.mis.cv1$t <- as.numeric(difftime(t1, t0, units = "secs"))
-print("9")
+print("31")
 
 #####################################################################################################################
-############################# 10. g: GLM Model, outside node, True adjustment model, Cv2 ############################
+############################# 32. g: GLM Model, outside node, True adjustment model, Cv2 ############################
 #####################################################################################################################
 t0 <- Sys.time()
 seq.created.estg.glm.modout.true.cv2 <- create.sequence(data.used         = data.used.full.cont.cont,
@@ -1339,10 +1359,10 @@ eval.final.estg.glm.modout.true.cv2 <- eval.measures.eff(final.tree   = final.tr
                                                          dir.split    = data.cont.cont$dir.split)
 
 eval.final.estg.glm.modout.true.cv2$t <- as.numeric(difftime(t1, t0, units = "secs"))
-print("10")
+print("32")
 
 #####################################################################################################################
-############################# 11. g: GLM Model, outside node, Noisy adjustment model, Cv2 ###########################
+########################### 33. g: GLM Model, outside node, Mis func adjustment model, Cv2 ##########################
 #####################################################################################################################
 t0 <- Sys.time()
 seq.created.estg.glm.modout.nois.cv2 <- create.sequence(data.used         = data.used.full.cont.cont,
@@ -1376,13 +1396,13 @@ eval.final.estg.glm.modout.nois.cv2 <- eval.measures.eff(final.tree   = final.tr
                                                          dir.split    = data.cont.cont$dir.split)
 
 eval.final.estg.glm.modout.nois.cv2$t <- as.numeric(difftime(t1, t0, units = "secs"))
-print("11")
+print("33")
 
 #####################################################################################################################
-########################## 12. g: GLM Model, outside node, Misspecified adjustment model, Cv2 #######################
+######################### 34. g: GLM Model, outside node, Unmeasured cov adjustment model, Cv2 ######################
 #####################################################################################################################
 t0 <- Sys.time()
-seq.created.estg.glm.modout.mis.cv2 <- create.sequence(data.used         = data.used.full.cont.cont,
+seq.created.estg.glm.modout.mis.cv2 <- create.sequence(data.used         = data.used.full.cont.cont.mis,
                                                        est.used          = "G",
                                                        type.var          = "cont",
                                                        adj.mod.out       = T,
@@ -1393,7 +1413,7 @@ seq.created.estg.glm.modout.mis.cv2 <- create.sequence(data.used         = data.
                                                        num.truc.obs      = 15,
                                                        min.node          = 15)
 
-final.tree.estg.glm.modout.mis.cv2 <- EstG.CvMethod2(data.used         = data.used.full.cont.cont,
+final.tree.estg.glm.modout.mis.cv2 <- EstG.CvMethod2(data.used         = data.used.full.cont.cont.mis,
                                                      tree.list         = seq.created.estg.glm.modout.mis.cv2$tree.list,             
                                                      type.var          = "cont",
                                                      seed              = a[job.number],
@@ -1405,7 +1425,7 @@ final.tree.estg.glm.modout.mis.cv2 <- EstG.CvMethod2(data.used         = data.us
 t1 <- Sys.time()
 
 eval.final.estg.glm.modout.mis.cv2 <- eval.measures.eff(final.tree   = final.tree.estg.glm.modout.mis.cv2[[1]],
-                                                        test.data    = data.cont.cont$test.data,
+                                                        test.data    = test.data.mis,
                                                         true.trt.eff = data.cont.cont$true.trt.eff,
                                                         noise.var    = data.cont.cont$noise.var,
                                                         corr.split   = data.cont.cont$corr.split,
@@ -1413,7 +1433,7 @@ eval.final.estg.glm.modout.mis.cv2 <- eval.measures.eff(final.tree   = final.tre
                                                         dir.split    = data.cont.cont$dir.split)
 
 eval.final.estg.glm.modout.mis.cv2$t <- as.numeric(difftime(t1, t0, units = "secs"))
-print("12")
+print("34")
 
 performance.homo.g <- list(glm.modout.true.cv1 = eval.final.estg.glm.modout.true.cv1,
                            glm.modout.nois.cv1 = eval.final.estg.glm.modout.nois.cv1,
@@ -1423,7 +1443,7 @@ performance.homo.g <- list(glm.modout.true.cv1 = eval.final.estg.glm.modout.true
                            glm.modout.mis.cv2  = eval.final.estg.glm.modout.mis.cv2)
 
 #####################################################################################################################
-###################### 19. dr: True GLM Model outside, True propensity score model outside, Cv1 #####################
+###################### 35. dr: True GLM Model outside, True propensity score model outside, Cv1 #####################
 #####################################################################################################################
 t0 <- Sys.time()
 seq.created.estdr.adjTGlmOut.propscTGlmOut.cv1 <- create.sequence(data.used         = data.used.cont.cont,
@@ -1464,10 +1484,10 @@ eval.final.estdr.adjTGlmOut.propscTGlmOut.cv1 <- eval.measures.eff(final.tree   
                                                                    where.split  = data.cont.cont$where.split,
                                                                    dir.split    = data.cont.cont$dir.split)
 eval.final.estdr.adjTGlmOut.propscTGlmOut.cv1$t <- as.numeric(difftime(t1, t0, units = "secs"))
-print("19")
+print("35")
 
 #####################################################################################################################
-###################### 20. dr: True GLM Model outside, Noisy propensity score model outside, Cv1 ####################
+#################### 36. dr: True GLM Model outside, Mis func propensity score model outside, Cv1 ###################
 #####################################################################################################################
 t0 <- Sys.time()
 seq.created.estdr.adjTGlmOut.propscNoisGlmOut.cv1 <- create.sequence(data.used         = data.used.cont.cont,
@@ -1508,10 +1528,10 @@ eval.final.estdr.adjTGlmOut.propscNoisGlmOut.cv1 <- eval.measures.eff(final.tree
                                                                       where.split  = data.cont.cont$where.split,
                                                                       dir.split    = data.cont.cont$dir.split)
 eval.final.estdr.adjTGlmOut.propscNoisGlmOut.cv1$t <- as.numeric(difftime(t1, t0, units = "secs"))
-print("20")
+print("36")
 
 #####################################################################################################################
-##################### 22. dr: Noisy GLM Model outside, True propensity score model outside, Cv1 #####################
+#################### 37. dr: Mis func GLM Model outside, True propensity score model outside, Cv1 ###################
 #####################################################################################################################
 t0 <- Sys.time()
 seq.created.estdr.adjNoisGlmOut.propscTGlmOut.cv1 <- create.sequence(data.used         = data.used.cont.cont,
@@ -1552,10 +1572,10 @@ eval.final.estdr.adjNoisGlmOut.propscTGlmOut.cv1 <- eval.measures.eff(final.tree
                                                                       where.split  = data.cont.cont$where.split,
                                                                       dir.split    = data.cont.cont$dir.split)
 eval.final.estdr.adjNoisGlmOut.propscTGlmOut.cv1$t <- as.numeric(difftime(t1, t0, units = "secs"))
-print("22")
+print("37")
 
 #####################################################################################################################
-##################### 24. dr: Noisy GLM Model outside, Noisy propensity score model outside, Cv1 ####################
+################## 38. dr: Mis func GLM Model outside, Mis func propensity score model outside, Cv1 #################
 #####################################################################################################################
 t0 <- Sys.time()
 seq.created.estdr.adjNoisGlmOut.propscNoisGlmOut.cv1 <- create.sequence(data.used         = data.used.cont.cont,
@@ -1596,13 +1616,13 @@ eval.final.estdr.adjNoisGlmOut.propscNoisGlmOut.cv1 <- eval.measures.eff(final.t
                                                                          where.split  = data.cont.cont$where.split,
                                                                          dir.split    = data.cont.cont$dir.split)
 eval.final.estdr.adjNoisGlmOut.propscNoisGlmOut.cv1$t <- as.numeric(difftime(t1, t0, units = "secs"))
-print("24")
+print("38")
 
 #####################################################################################################################
-############# 27. dr: Misspecified GLM Model outside, Misspecified propensity score model outside, Cv1 ##############
+############ 39. dr: Unmeasured cov GLM Model outside, Unmeasured cov propensity score model outside, Cv1 ###########
 #####################################################################################################################
 t0 <- Sys.time()
-seq.created.estdr.adjFGlmOut.propscFGlmOut.cv1 <- create.sequence(data.used         = data.used.cont.cont,
+seq.created.estdr.adjFGlmOut.propscFGlmOut.cv1 <- create.sequence(data.used         = data.used.cont.cont.mis,
                                                                   est.used          = "DR",
                                                                   type.var          = "cont",
                                                                   propsc.mod.out    = T,
@@ -1616,10 +1636,10 @@ seq.created.estdr.adjFGlmOut.propscFGlmOut.cv1 <- create.sequence(data.used     
                                                                   num.truc.obs      = 30,
                                                                   min.node          = 20)
 
-final.tree.estdr.adjFGlmOut.propscFGlmOut.cv1 <- EstDr.CvMethod1(data.used         = data.used.cont.cont,
+final.tree.estdr.adjFGlmOut.propscFGlmOut.cv1 <- EstDr.CvMethod1(data.used         = data.used.cont.cont.mis,
                                                                  tree.list         = seq.created.estdr.adjFGlmOut.propscFGlmOut.cv1$tree.list, 
                                                                  lambda.used       = qchisq(0.95, 1),
-                                                                 val.sample        = data.validation.cont.cont,
+                                                                 val.sample        = data.validation.cont.cont.mis,
                                                                  type.var          = "cont",
                                                                  propsc.mod.out    = T,
                                                                  propsc.mthd       = "GLM",
@@ -1633,17 +1653,17 @@ final.tree.estdr.adjFGlmOut.propscFGlmOut.cv1 <- EstDr.CvMethod1(data.used      
 t1 <- Sys.time()
 
 eval.final.estdr.adjFGlmOut.propscFGlmOut.cv1 <- eval.measures.eff(final.tree   = final.tree.estdr.adjFGlmOut.propscFGlmOut.cv1[[1]],
-                                                                   test.data    = data.cont.cont$test.data,
+                                                                   test.data    = test.data.mis,
                                                                    true.trt.eff = data.cont.cont$true.trt.eff,
                                                                    noise.var    = data.cont.cont$noise.var,
                                                                    corr.split   = data.cont.cont$corr.split,
                                                                    where.split  = data.cont.cont$where.split,
                                                                    dir.split    = data.cont.cont$dir.split)
 eval.final.estdr.adjFGlmOut.propscFGlmOut.cv1$t <- as.numeric(difftime(t1, t0, units = "secs"))
-print("27")
+print("39")
 
 #####################################################################################################################
-###################### 28. dr: True GLM Model outside, True propensity score model outside, Cv2 #####################
+###################### 40. dr: True GLM Model outside, True propensity score model outside, Cv2 #####################
 #####################################################################################################################
 t0 <- Sys.time()
 seq.created.estdr.adjTGlmOut.propscTGlmOut.cv2 <- create.sequence(data.used         = data.used.full.cont.cont,
@@ -1683,10 +1703,10 @@ eval.final.estdr.adjTGlmOut.propscTGlmOut.cv2 <- eval.measures.eff(final.tree   
                                                                    where.split  = data.cont.cont$where.split,
                                                                    dir.split    = data.cont.cont$dir.split)
 eval.final.estdr.adjTGlmOut.propscTGlmOut.cv2$t <- as.numeric(difftime(t1, t0, units = "secs"))
-print("28")
+print("40")
 
 #####################################################################################################################
-###################### 29. dr: True GLM Model outside, Noisy propensity score model outside, Cv2 ####################
+#################### 41. dr: True GLM Model outside, Mis func propensity score model outside, Cv2 ###################
 #####################################################################################################################
 t0 <- Sys.time()
 seq.created.estdr.adjTGlmOut.propscNoisGlmOut.cv2 <- create.sequence(data.used         = data.used.full.cont.cont,
@@ -1726,10 +1746,10 @@ eval.final.estdr.adjTGlmOut.propscNoisGlmOut.cv2 <- eval.measures.eff(final.tree
                                                                       where.split  = data.cont.cont$where.split,
                                                                       dir.split    = data.cont.cont$dir.split)
 eval.final.estdr.adjTGlmOut.propscNoisGlmOut.cv2$t <- as.numeric(difftime(t1, t0, units = "secs"))
-print("29")
+print("41")
 
 #####################################################################################################################
-##################### 31. dr: Noisy GLM Model outside, True propensity score model outside, Cv2 #####################
+#################### 42. dr: Mis func GLM Model outside, True propensity score model outside, Cv2 ###################
 #####################################################################################################################
 t0 <- Sys.time()
 seq.created.estdr.adjNoisGlmOut.propscTGlmOut.cv2 <- create.sequence(data.used         = data.used.full.cont.cont,
@@ -1769,10 +1789,10 @@ eval.final.estdr.adjNoisGlmOut.propscTGlmOut.cv2 <- eval.measures.eff(final.tree
                                                                       where.split  = data.cont.cont$where.split,
                                                                       dir.split    = data.cont.cont$dir.split)
 eval.final.estdr.adjNoisGlmOut.propscTGlmOut.cv2$t <- as.numeric(difftime(t1, t0, units = "secs"))
-print("31")
+print("42")
 
 #####################################################################################################################
-#################### 33. dr: Noisy GLM Model outside, Noisy propensity score model outside, Cv2 #####################
+################# 43. dr: Mis func GLM Model outside, Mis func propensity score model outside, Cv2 ##################
 #####################################################################################################################
 t0 <- Sys.time()
 seq.created.estdr.adjNoisGlmOut.propscNoisGlmOut.cv2 <- create.sequence(data.used         = data.used.full.cont.cont,
@@ -1812,13 +1832,13 @@ eval.final.estdr.adjNoisGlmOut.propscNoisGlmOut.cv2 <- eval.measures.eff(final.t
                                                                          where.split  = data.cont.cont$where.split,
                                                                          dir.split    = data.cont.cont$dir.split)
 eval.final.estdr.adjNoisGlmOut.propscNoisGlmOut.cv2$t <- as.numeric(difftime(t1, t0, units = "secs"))
-print("33")
+print("43")
 
 #####################################################################################################################
-############# 36. dr: Misspecified GLM Model outside, Misspecified propensity score model outside, Cv2 ##############
+############ 44. dr: Unmeasured cov GLM Model outside, Unmeasured cov propensity score model outside, Cv2 ###########
 #####################################################################################################################
 t0 <- Sys.time()
-seq.created.estdr.adjFGlmOut.propscFGlmOut.cv2 <- create.sequence(data.used         = data.used.full.cont.cont,
+seq.created.estdr.adjFGlmOut.propscFGlmOut.cv2 <- create.sequence(data.used         = data.used.full.cont.cont.mis,
                                                                   est.used          = "DR",
                                                                   type.var          = "cont",
                                                                   propsc.mod.out    = T,
@@ -1832,7 +1852,7 @@ seq.created.estdr.adjFGlmOut.propscFGlmOut.cv2 <- create.sequence(data.used     
                                                                   num.truc.obs      = 30,
                                                                   min.node          = 20)
 
-final.tree.estdr.adjFGlmOut.propscFGlmOut.cv2 <- EstDr.CvMethod2(data.used         = data.used.full.cont.cont,
+final.tree.estdr.adjFGlmOut.propscFGlmOut.cv2 <- EstDr.CvMethod2(data.used         = data.used.full.cont.cont.mis,
                                                                  tree.list         = seq.created.estdr.adjFGlmOut.propscFGlmOut.cv2$tree.list,
                                                                  type.var          = "cont",
                                                                  seed              = a[job.number], 
@@ -1848,14 +1868,14 @@ final.tree.estdr.adjFGlmOut.propscFGlmOut.cv2 <- EstDr.CvMethod2(data.used      
 t1 <- Sys.time()
 
 eval.final.estdr.adjFGlmOut.propscFGlmOut.cv2 <- eval.measures.eff(final.tree   = final.tree.estdr.adjFGlmOut.propscFGlmOut.cv2[[1]],
-                                                                   test.data    = data.cont.cont$test.data,
+                                                                   test.data    = test.data.mis,
                                                                    true.trt.eff = data.cont.cont$true.trt.eff,
                                                                    noise.var    = data.cont.cont$noise.var,
                                                                    corr.split   = data.cont.cont$corr.split,
                                                                    where.split  = data.cont.cont$where.split,
                                                                    dir.split    = data.cont.cont$dir.split)
 eval.final.estdr.adjFGlmOut.propscFGlmOut.cv2$t <- as.numeric(difftime(t1, t0, units = "secs"))
-print("36")
+print("44")
 
 performance.homo.drOut <- list(adjTGlmOut.propscTGlmOut.cv1       = eval.final.estdr.adjTGlmOut.propscTGlmOut.cv1,
                                adjTGlmOut.propscNoisGlmOut.cv1    = eval.final.estdr.adjTGlmOut.propscNoisGlmOut.cv1,

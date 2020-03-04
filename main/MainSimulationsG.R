@@ -21,6 +21,16 @@ data.used.cont.cont       <- data.used.full.cont.cont[1:800, ]
 # val.sample: used in EstIpw.CvMethod1, the order of the columns must be A, Y, X
 data.validation.cont.cont <- data.used.full.cont.cont[801:1000, ]  
 
+# Pretend X2 is unmeasured for unmeasured cov
+data.used.full.cont.cont.mis <- data.used.full.cont.cont %>%
+  select(-X2)
+data.used.cont.cont.mis <- data.used.cont.cont %>%
+  select(-X2)
+data.validation.cont.cont.mis <- data.validation.cont.cont %>%
+  select(-X2)
+test.data.mis <- data.cont.cont$test.data %>%
+  select(-X2)
+
 #####################################################################################################################
 ############################## 1. g: GLM Model, inside node, True adjustment model, cv1 #############################
 #####################################################################################################################
@@ -61,7 +71,7 @@ eval.final.estg.glm.modinnd.true.cv1$corr.frst.splt <- as.character(seq.created.
 print("1")
 
 #####################################################################################################################
-############################## 2. g: GLM Model, inside node, Noisy adjustment model, cv1 ############################
+############################ 2. g: GLM Model, inside node, Mis func adjustment model, cv1 ###########################
 #####################################################################################################################
 t0 <- Sys.time()
 seq.created.estg.glm.modinnd.nois.cv1 <- create.sequence(data.used         = data.used.cont.cont,
@@ -100,10 +110,10 @@ eval.final.estg.glm.modinnd.nois.cv1$corr.frst.splt <- as.character(seq.created.
 print("2")
 
 #####################################################################################################################
-########################## 3. g: GLM Model, inside node, Misspecified adjustment model, cv1 #########################
+######################## 3. g: GLM Model, inside node, Unmeasured cov adjustment model, cv1 #########################
 #####################################################################################################################
 t0 <- Sys.time()
-seq.created.estg.glm.modinnd.mis.cv1 <- create.sequence(data.used         = data.used.cont.cont,
+seq.created.estg.glm.modinnd.mis.cv1 <- create.sequence(data.used         = data.used.cont.cont.mis,
                                                         est.used          = "G",
                                                         type.var          = "cont",
                                                         adj.mod.out       = F,
@@ -114,10 +124,10 @@ seq.created.estg.glm.modinnd.mis.cv1 <- create.sequence(data.used         = data
                                                         num.truc.obs      = 15,
                                                         min.node          = 15)
 
-final.tree.estg.glm.modinnd.mis.cv1 <- EstG.CvMethod1(data.used         = data.used.cont.cont,
+final.tree.estg.glm.modinnd.mis.cv1 <- EstG.CvMethod1(data.used         = data.used.cont.cont.mis,
                                                       tree.list         = seq.created.estg.glm.modinnd.mis.cv1$tree.list,
                                                       lambda.used       = qchisq(0.95, 1),
-                                                      val.sample        = data.validation.cont.cont,              
+                                                      val.sample        = data.validation.cont.cont.mis,              
                                                       type.var          = "cont",
                                                       adj.mod.out       = F,
                                                       adj.mthd          = "GLM",
@@ -128,7 +138,7 @@ final.tree.estg.glm.modinnd.mis.cv1 <- EstG.CvMethod1(data.used         = data.u
 t1 <- Sys.time()
 
 eval.final.estg.glm.modinnd.mis.cv1 <- eval.measures.eff(final.tree   = final.tree.estg.glm.modinnd.mis.cv1[[1]],
-                                                         test.data    = data.cont.cont$test.data,
+                                                         test.data    = test.data.mis,
                                                          true.trt.eff = data.cont.cont$true.trt.eff,
                                                          noise.var    = data.cont.cont$noise.var,
                                                          corr.split   = data.cont.cont$corr.split,
@@ -153,8 +163,18 @@ data.used.cont.cont       <- data.used.full.cont.cont[1:800, ]
 # val.sample: used in EstIpw.CvMethod1, the order of the columns must be A, Y, X
 data.validation.cont.cont <- data.used.full.cont.cont[801:1000, ]  
 
+# Pretend X2 is unmeasured for unmeasured cov
+data.used.full.cont.cont.mis <- data.used.full.cont.cont %>%
+  select(-X2)
+data.used.cont.cont.mis <- data.used.cont.cont %>%
+  select(-X2)
+data.validation.cont.cont.mis <- data.validation.cont.cont %>%
+  select(-X2)
+test.data.mis <- data.cont.cont$test.data %>%
+  select(-X2)
+
 #####################################################################################################################
-############################## 7. g: GLM Model, inside node, True adjustment model, cv1 #############################
+############################## 4. g: GLM Model, inside node, True adjustment model, cv1 #############################
 #####################################################################################################################
 t0 <- Sys.time()
 seq.created.estg.glm.modinnd.true.cv1 <- create.sequence(data.used         = data.used.cont.cont,
@@ -189,10 +209,10 @@ eval.final.estg.glm.modinnd.true.cv1 <- eval.measures.eff(final.tree   = final.t
                                                           where.split  = data.cont.cont$where.split,
                                                           dir.split    = data.cont.cont$dir.split)
 eval.final.estg.glm.modinnd.true.cv1$t <- as.numeric(difftime(t1, t0, units = "secs"))
-print("7")
+print("4")
 
 #####################################################################################################################
-############################## 8. g: GLM Model, inside node, Noisy adjustment model, cv1 ############################
+############################# 5. g: GLM Model, inside node, Mis func adjustment model, cv1 ##########################
 #####################################################################################################################
 t0 <- Sys.time()
 seq.created.estg.glm.modinnd.nois.cv1 <- create.sequence(data.used         = data.used.cont.cont,
@@ -227,13 +247,13 @@ eval.final.estg.glm.modinnd.nois.cv1 <- eval.measures.eff(final.tree   = final.t
                                                           where.split  = data.cont.cont$where.split,
                                                           dir.split    = data.cont.cont$dir.split)
 eval.final.estg.glm.modinnd.nois.cv1$t <- as.numeric(difftime(t1, t0, units = "secs"))
-print("8")
+print("5")
 
 #####################################################################################################################
-########################## 9. g: GLM Model, inside node, Misspecified adjustment model, cv1 #########################
+######################### 6. g: GLM Model, inside node, Unmeasured cov adjustment model, cv1 ########################
 #####################################################################################################################
 t0 <- Sys.time()
-seq.created.estg.glm.modinnd.mis.cv1 <- create.sequence(data.used         = data.used.cont.cont,
+seq.created.estg.glm.modinnd.mis.cv1 <- create.sequence(data.used         = data.used.cont.cont.mis,
                                                         est.used          = "G",
                                                         type.var          = "cont",
                                                         adj.mod.out       = F,
@@ -244,10 +264,10 @@ seq.created.estg.glm.modinnd.mis.cv1 <- create.sequence(data.used         = data
                                                         num.truc.obs      = 15,
                                                         min.node          = 15)
 
-final.tree.estg.glm.modinnd.mis.cv1 <- EstG.CvMethod1(data.used         = data.used.cont.cont,
+final.tree.estg.glm.modinnd.mis.cv1 <- EstG.CvMethod1(data.used         = data.used.cont.cont.mis,
                                                       tree.list         = seq.created.estg.glm.modinnd.mis.cv1$tree.list,
                                                       lambda.used       = qchisq(0.95, 1),
-                                                      val.sample        = data.validation.cont.cont,              
+                                                      val.sample        = data.validation.cont.cont.mis,              
                                                       type.var          = "cont",
                                                       adj.mod.out       = F,
                                                       adj.mthd          = "GLM",
@@ -258,14 +278,14 @@ final.tree.estg.glm.modinnd.mis.cv1 <- EstG.CvMethod1(data.used         = data.u
 t1 <- Sys.time()
 
 eval.final.estg.glm.modinnd.mis.cv1 <- eval.measures.eff(final.tree   = final.tree.estg.glm.modinnd.mis.cv1[[1]],
-                                                         test.data    = data.cont.cont$test.data,
+                                                         test.data    = test.data.mis,
                                                          true.trt.eff = data.cont.cont$true.trt.eff,
                                                          noise.var    = data.cont.cont$noise.var,
                                                          corr.split   = data.cont.cont$corr.split,
                                                          where.split  = data.cont.cont$where.split,
                                                          dir.split    = data.cont.cont$dir.split)
 eval.final.estg.glm.modinnd.mis.cv1$t <- as.numeric(difftime(t1, t0, units = "secs"))
-print("9")
+print("6")
 
 performance.homo.g <- list(glm.modinnd.true.cv1 = eval.final.estg.glm.modinnd.true.cv1,
                            glm.modinnd.nois.cv1 = eval.final.estg.glm.modinnd.nois.cv1,
