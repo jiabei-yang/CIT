@@ -1,7 +1,4 @@
-job.number <- as.numeric(Sys.getenv("SLURM_ARRAY_TASK_ID"))
-load("../seed1000.rda")
-set.seed(a[job.number])
-
+#!/usr/bin/env Rscript
 setwd("..")
 folder <- paste(getwd(), "/Functions/", sep="")
 functions <- list.files(folder)
@@ -11,6 +8,19 @@ for (i in functions){
 }
 
 setwd("main/")
+
+# Read in the arguments from command line
+option_list = list(
+  make_option(c("-a", "--array"), type="integer"))
+
+opt_parser = OptionParser(option_list=option_list);
+opt = parse_args(opt_parser);
+iters <- opt$array
+
+job.number <- as.numeric(Sys.getenv("SLURM_ARRAY_TASK_ID")) + iters
+load("../seed1000.rda")
+set.seed(a[job.number])
+print(job.number)
 
 #####################################################################################################################
 ################################################# Heterogeneous #####################################################
@@ -291,11 +301,7 @@ performance.homo.ipw <- list(glm.propscinnd.true.cv1 = eval.final.estipw.glm.pro
                              glm.propscinnd.nois.cv1 = eval.final.estipw.glm.propscinnd.nois.cv1,
                              glm.propscinnd.mis.cv1  = eval.final.estipw.glm.propscinnd.mis.cv1)
 
-
-
-
-
-
-
-
+file.name = paste("../Data/MainSimulationsIpw/", toString(job.number), ".RData", sep = "")
+save(performance.hetero.ipw, performance.homo.ipw,
+     file = file.name)
 
