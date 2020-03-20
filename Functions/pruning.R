@@ -13,17 +13,11 @@ create.sequence = function(data.used, est.used, type.var = "cont",        # For 
   # Output: A list with two elements tree.list which is the sequence of candidate trees 
   # and lambda.list which is the sequence of penalization parameters
   
-  # Need different formulas for different outcomes
-  # if(type.var == "cont"){
-  #   form.used <- as.formula(paste("Y ~ ", paste(names(data.used)[!(names(data.used) %in% c("Y", "A"))], collapse= "+")))
-  # } else if(type.var == "bin"){
-  
+  # All fitting used rownumb as the outcome regardless of type.var
   data.used.covariates  <- data.used[!colnames(data.used) %in% c("Y", "A")]
   form.used             <- as.formula(paste("rownumb ~ ", paste(colnames(data.used.covariates), collapse= "+")))
   data.used.wiz.rownumb <- cbind(rownumb = 1:dim(data.used)[1], data.used)
   data.used.noy         <- data.used[, !colnames(data.used) %in% c("Y")]
-  
-  # }
   
   # Creating ulist.used and parameter vector used
   if (est.used == "IPW"){

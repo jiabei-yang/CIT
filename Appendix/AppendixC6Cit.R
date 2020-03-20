@@ -1986,3 +1986,8 @@ performance.homo.drInnd <- list(adjTGlmInnd.propscTGlmInnd.cv1       = eval.fina
                                 adjNoisGlmInnd.propscNoisGlmInnd.cv2 = eval.final.estdr.adjNoisGlmInnd.propscNoisGlmInnd.cv2,
                                 adjFGlmInnd.propscFGlmInnd.cv2       = eval.final.estdr.adjFGlmInnd.propscFGlmInnd.cv2)
 
+file.name = paste("../Data/AppendixC6Cit/", toString(job.number), ".RData", sep = "")
+save(performance.hetero.ipw, performance.homo.ipw,
+     performance.hetero.g, performance.homo.g,
+     performance.hetero.drInnd, performance.homo.drInnd,
+     file = file.name)

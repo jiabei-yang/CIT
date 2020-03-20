@@ -1,6 +1,6 @@
 # Causal Interaction Trees
 
-Code for paper "Causal Interaction Trees: Tree-Based Subgroup Identification for Observational Data".
+Code for paper "[Causal Interaction Trees: Tree-Based Subgroup Identification for Observational Data](https://arxiv.org/abs/2003.03042)".
 
 * `main/`: code to run simulations in the main manuscript.
   + `MainSimulationsCt.R`: run causal tree algorithms.

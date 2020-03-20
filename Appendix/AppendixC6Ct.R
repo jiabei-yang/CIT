@@ -48,7 +48,7 @@ comb.scnr <- comb.scnr[!duplicated(comb.scnr),]
 rownames(comb.scnr) <- 1:nrow(comb.scnr)
 comb.scnr <- comb.scnr[, 4:1]
 
-performance.hetero.ct <- list()
+performance.hetero.ct.settings <- list()
 
 for (i in 1:nrow(comb.scnr)) {
   
@@ -149,8 +149,8 @@ for (i in 1:nrow(comb.scnr)) {
   eval.ct.propsc$t <- as.numeric(difftime(t1, t0, units = "secs"))
   eval.ct.propsc$corr.frst.splt <- as.character(ct.propsc$frame$var[1]) == data.bin.mixed$corr.split
   
-  performance.hetero.ct <- c(performance.hetero.ct, list(eval.ct.propsc))
-  names(performance.hetero.ct)[i] <- name.i
+  performance.hetero.ct.settings <- c(performance.hetero.ct.settings, list(eval.ct.propsc))
+  names(performance.hetero.ct.settings)[i] <- name.i
   print(name.i)
 }
 
@@ -185,7 +185,7 @@ comb.scnr <- comb.scnr[!duplicated(comb.scnr),]
 rownames(comb.scnr) <- 1:nrow(comb.scnr)
 comb.scnr <- comb.scnr[, 4:1]
 
-performance.homo.ct <- list()
+performance.homo.ct.settings <- list()
 for (i in 1:nrow(comb.scnr)) {
   
   t0 <- Sys.time()
@@ -282,8 +282,8 @@ for (i in 1:nrow(comb.scnr)) {
                                       CT           = T)
   eval.ct.propsc$t <- as.numeric(difftime(t1, t0, units = "secs"))
   
-  performance.homo.ct <- c(performance.homo.ct, list(eval.ct.propsc))
-  names(performance.homo.ct)[i] <- name.i
+  performance.homo.ct.settings <- c(performance.homo.ct.settings, list(eval.ct.propsc))
+  names(performance.homo.ct.settings)[i] <- name.i
   print(name.i)
 }
 
@@ -496,7 +496,7 @@ tmp.propsc <- est.prop.sc(df.noy    = data.used.full.bin.mixed.mis[, !colnames(d
                           form.true = "A ~ X1 + X3 + X4 + X5 + X6")
 tmp.propsc$prop.sc <- ifelse(data.used.full.bin.mixed.mis$A == 1, tmp.propsc$prop.sc, 1 - tmp.propsc$prop.sc)
 
-ct.propsc.mis.nohonest <- causalTree(Y ~ X1 + X2 + X3 + X4 + X5 + X6, 
+ct.propsc.mis.nohonest <- causalTree(Y ~ X1 + X3 + X4 + X5 + X6, 
                                      data         = data.used.full.bin.mixed.mis,
                                      weights      = 1 / tmp.propsc$prop.sc,
                                      treatment    = data.used.full.bin.mixed.mis$A,
@@ -770,7 +770,7 @@ tmp.propsc <- est.prop.sc(df.noy    = data.used.full.bin.mixed.mis[, !colnames(d
                           form.true = "A ~ X1 + X3 + X4 + X5 + X6")
 tmp.propsc$prop.sc <- ifelse(data.used.full.bin.mixed.mis$A == 1, tmp.propsc$prop.sc, 1 - tmp.propsc$prop.sc)
 
-ct.propsc.mis.nohonest <- causalTree(Y ~ X1 + X2 + X3 + X4 + X5 + X6, 
+ct.propsc.mis.nohonest <- causalTree(Y ~ X1 + X3 + X4 + X5 + X6, 
                                      data         = data.used.full.bin.mixed.mis,
                                      weights      = 1 / tmp.propsc$prop.sc,
                                      treatment    = data.used.full.bin.mixed.mis$A,
@@ -818,7 +818,7 @@ train.idx <- c(sample(trtIdx, length(trtIdx) / 2),
 train.data <- data.used.full.bin.mixed.mis[train.idx, ]
 est.data   <- data.used.full.bin.mixed.mis[-train.idx, ]
 
-ct.propsc.mis.honest <- honest.causalTree(Y ~ X1 + X2 + X3 + X4 + X5 + X6,
+ct.propsc.mis.honest <- honest.causalTree(Y ~ X1 + X3 + X4 + X5 + X6,
                                           data             = train.data,
                                           weights          = 1 / tmp.propsc$prop.sc[train.idx],
                                           treatment        = train.data$A,
@@ -1053,7 +1053,7 @@ tmp.propsc <- est.prop.sc(df.noy    = data.used.full.bin.mixed.mis[, !colnames(d
                           form.true = "A ~ X1 + X3 + X4 + X5 + X6")
 tmp.propsc$prop.sc <- ifelse(data.used.full.bin.mixed.mis$A == 1, tmp.propsc$prop.sc, 1 - tmp.propsc$prop.sc)
 
-ct.propsc.mis.nohonest <- causalTree(Y ~ X1 + X2 + X3 + X4 + X5 + X6, 
+ct.propsc.mis.nohonest <- causalTree(Y ~ X1 + X3 + X4 + X5 + X6, 
                                      data         = data.used.full.bin.mixed.mis,
                                      weights      = 1 / tmp.propsc$prop.sc,
                                      treatment    = data.used.full.bin.mixed.mis$A,
@@ -1098,7 +1098,7 @@ train.idx <- c(sample(trtIdx, length(trtIdx) / 2),
 train.data <- data.used.full.bin.mixed.mis[train.idx, ]
 est.data   <- data.used.full.bin.mixed.mis[-train.idx, ]
 
-ct.propsc.mis.honest <- honest.causalTree(Y ~ X1 + X2 + X3 + X4 + X5 + X6,
+ct.propsc.mis.honest <- honest.causalTree(Y ~ X1 + X3 + X4 + X5 + X6,
                                           data             = train.data,
                                           weights          = 1 / tmp.propsc$prop.sc[train.idx],
                                           treatment        = train.data$A,
@@ -1309,7 +1309,7 @@ tmp.propsc <- est.prop.sc(df.noy    = data.used.full.bin.mixed.mis[, !colnames(d
                           form.true = "A ~ X1 + X3 + X4 + X5 + X6")
 tmp.propsc$prop.sc <- ifelse(data.used.full.bin.mixed.mis$A == 1, tmp.propsc$prop.sc, 1 - tmp.propsc$prop.sc)
 
-ct.propsc.mis.nohonest <- causalTree(Y ~ X1 + X2 + X3 + X4 + X5 + X6, 
+ct.propsc.mis.nohonest <- causalTree(Y ~ X1 + X3 + X4 + X5 + X6, 
                                      data         = data.used.full.bin.mixed.mis,
                                      weights      = 1 / tmp.propsc$prop.sc,
                                      treatment    = data.used.full.bin.mixed.mis$A,
@@ -1354,7 +1354,7 @@ train.idx <- c(sample(trtIdx, length(trtIdx) / 2),
 train.data <- data.used.full.bin.mixed.mis[train.idx, ]
 est.data   <- data.used.full.bin.mixed.mis[-train.idx, ]
 
-ct.propsc.mis.honest <- honest.causalTree(Y ~ X1 + X2 + X3 + X4 + X5 + X6,
+ct.propsc.mis.honest <- honest.causalTree(Y ~ X1 + X3 + X4 + X5 + X6,
                                           data             = train.data,
                                           weights          = 1 / tmp.propsc$prop.sc[train.idx],
                                           treatment        = train.data$A,
@@ -1390,4 +1390,8 @@ performance.homo.ct.final <- list(true.nohonest = eval.ct.propsc.true.nohonest,
                                   mis.nohonest  = eval.ct.propsc.mis.nohonest,
                                   mis.honest    = eval.ct.propsc.mis.honest)
 
-
+file.name = paste("../Data/AppendixC6Ct/", toString(job.number), ".RData", sep = "")
+save(performance.hetero.ct.settings, performance.homo.ct.settings,
+     performance.hetero.ct, performance.homo.ct,
+     performance.hetero.ct.final, performance.homo.ct.final,
+     file = file.name)

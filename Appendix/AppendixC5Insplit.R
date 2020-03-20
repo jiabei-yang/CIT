@@ -1888,3 +1888,8 @@ performance.homo.drInsplt <- list(adjTGlmInsplt.propscTGlmInsplt.cv1       = eva
                                   adjNoisGlmInsplt.propscNoisGlmInsplt.cv2 = eval.final.estdr.adjNoisGlmInsplt.propscNoisGlmInsplt.cv2,
                                   adjFGlmInsplt.propscFGlmInsplt.cv2       = eval.final.estdr.adjFGlmInsplt.propscFGlmInsplt.cv2)
 
+file.name = paste("../Data/AppendixC5Insplit/", toString(job.number), ".RData", sep = "")
+save(performance.hetero.ipw, performance.homo.ipw,
+     performance.hetero.g, performance.homo.g,
+     performance.hetero.drInsplt, performance.homo.drInsplt,
+     file = file.name)

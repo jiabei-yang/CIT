@@ -1888,3 +1888,8 @@ performance.homo.drOut <- list(adjTGlmOut.propscTGlmOut.cv1       = eval.final.e
                                adjNoisGlmOut.propscNoisGlmOut.cv2 = eval.final.estdr.adjNoisGlmOut.propscNoisGlmOut.cv2,
                                adjFGlmOut.propscFGlmOut.cv2       = eval.final.estdr.adjFGlmOut.propscFGlmOut.cv2)
 
+file.name = paste("../Data/AppendixC5Out/", toString(job.number), ".RData", sep = "")
+save(performance.hetero.ipw, performance.homo.ipw,
+     performance.hetero.g, performance.homo.g,
+     performance.hetero.drOut, performance.homo.drOut,
+     file = file.name)

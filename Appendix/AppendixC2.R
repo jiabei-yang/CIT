@@ -10,7 +10,7 @@ for (i in functions){
   source(i)
 }
 
-setwd("main/")
+setwd("Appendix/")
 
 # Causal Tree
 # library(devtools) 
@@ -600,3 +600,10 @@ print("12")
 performance.homo.ct.final <- list(true.honest   = eval.ct.propsc.true.honest,
                                   nois.honest   = eval.ct.propsc.nois.honest,
                                   mis.honest    = eval.ct.propsc.mis.honest)
+
+file.name = paste("../Data/AppendixC2/", toString(job.number), ".RData", sep = "")
+save(performance.homo.ct, performance.hetero.ct,
+     performance.homo.ct.final, performance.hetero.ct.final,
+     file = file.name)
+
+

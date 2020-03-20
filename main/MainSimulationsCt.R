@@ -1,7 +1,4 @@
-job.number <- as.numeric(Sys.getenv("SLURM_ARRAY_TASK_ID"))
-load("../seed1000.rda")
-set.seed(a[job.number])
-
+#!/usr/bin/env Rscript
 setwd("..")
 folder <- paste(getwd(), "/Functions/", sep="")
 functions <- list.files(folder)
@@ -11,6 +8,19 @@ for (i in functions){
 }
 
 setwd("main/")
+
+# Read in the arguments from command line
+option_list = list(
+  make_option(c("-a", "--array"), type="integer"))
+
+opt_parser = OptionParser(option_list=option_list);
+opt = parse_args(opt_parser);
+iters <- opt$array
+
+job.number <- as.numeric(Sys.getenv("SLURM_ARRAY_TASK_ID")) + iters
+load("../seed1000.rda")
+set.seed(a[job.number])
+print(job.number)
 
 # Causal Tree
 # library(devtools) 
@@ -517,3 +527,7 @@ performance.homo.ct.final <- list(true.nohonest = eval.ct.propsc.true.nohonest,
                                   nois.nohonest = eval.ct.propsc.nois.nohonest,
                                   mis.nohonest  = eval.ct.propsc.mis.nohonest)
 
+file.name = paste("../Data/MainSimulationsCt/", toString(job.number), ".RData", sep = "")
+save(performance.hetero.ct, performance.hetero.ct.final, 
+     performance.homo.ct, performance.homo.ct.final,
+     file = file.name)

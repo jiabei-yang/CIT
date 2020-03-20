@@ -284,3 +284,6 @@ for (i in 1:nrow(comb.scnr)) {
   print(name.i)
 }
 
+file.name = paste("../Data/AppendixC1/", toString(job.number), ".RData", sep = "")
+save(performance.homo.ct, performance.hetero.ct,
+     file = file.name)
