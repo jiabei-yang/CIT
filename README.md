@@ -37,12 +37,21 @@ Code for paper "Causal Interaction Trees: Finding Subgroups with Heterogeneous T
 
 * `seed1000.rda`: seeds for generating the data in simulations.
 
-* `Appendix/`: Additional code to run simulations in Web Appendices.
+* `Appendix/`: Additional code to run simulations in Web Appendices.  
+  + `Appendix*.R`: code for Web Appendix *.
+  + `RunAppendix*.sh`: shell scripts to run associated R scripts on `slurm`.
 
-* `Data/`: data for simulation results.
+* `Data/`: simulation results and data from the SUPPORT study.
   
 * `Results/`: code to generate figures and tables in the paper.
   + `main_AppendixC3.R`: Figure 1, Table 1 and Table S2.
-  
-  
-  
+  + `AppendixC1.R`: Figure S1 and Table S1.
+  + `AppendixC2.R`: Figure S2.
+  + `AppendixC4.R`: Figure S3 and Table S3.
+  + `AppendixC5.R`: Figure S4, Figure S5, Table S4 and Table S5.  
+  + `AppendixC6.R`: Figure S6 and Table S6.
+  + `AppendixC7.R`: Figure S7, Table S7 and Table S8. 
+  + `AppendixC8.R`: Figure S8 and Table S9.  
+  + `AppendixC9.R`: Figure S9 and Table S10. 
+  + `AppendixD23.R`: Figure S10, Figure S11 and Figure S12.
+  + `AppendixD4.R`: Figure S13 and Table S12. 
