@@ -1,14 +1,22 @@
 # Causal Interaction Trees
 
-Code for paper "Causal Interaction Trees: Tree-Based Subgroup Identification for Observational Data" ([arXiv link](https://arxiv.org/abs/2003.03042)).
+Code for paper "Causal Interaction Trees: Finding Subgroups with Heterogeneous Treatment Effects in Observational Data" ([arXiv link](https://arxiv.org/abs/2003.03042)).
 
 * `main/`: code for simulations and data analysis in the main manuscript.
   * Simulations:
     + `CausalTreeOriginal.R`: run Original Causal Tree algorithms.
     + `CausalTreeBest.R`: run Best Causal Tree algorithms.
-    + `MainIpw.R`: run inverse probability weighting interaction trees.
+    + `MainIpw.R`: run Inverse Probability Weighting Causal Interaction Tree algorithms.
     + `MainG.R`: run G-formula Causal Interaction Tree algorithms.
     + `MainDr.R`: run Doubly Robust Causal Interaction Tree algorithms.
+  * Analysis of the SUPPORT study:
+    + `RhcOptCt.R`: run Causal Tree algorithms.
+    + `RhcOptIpw.R`: run Inverse Probability Weighting Causal Interaction Tree algorithms.
+    + `RhcOptG.R`: run G-formula Causal Interaction Tree algorithms.
+    + `RhcOptDr.R`: run Doubly Robust Causal Interaction Tree algorithms.
+    + `RhcRootBi.R`: calculate the bootstrap interval for the root node.
+    + `RhcFrstSpltBi.R`: calculate the bootstrap intervals for the two subgroups given the first split in the large tree built by DR-CIT.
+  * `Run*.R`: shell scripts to run associated R scripts on `slurm`.
   
 * `Functions/`: functions to implement the Inverse Probability Weighting, G-computation, and Doubly Robust Interaction trees.
   + `CvMethod1.R`: functions for the main final tree selection with different estimators. 
