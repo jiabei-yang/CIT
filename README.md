@@ -27,22 +27,22 @@ Code for paper "Causal Interaction Trees: Finding Subgroups with Heterogeneous T
     + `est.prop.sc()` fits the propensity score model.
     + `withWarnings()` saves the warning messages from functions.
   + `EstDrTempFunc.R`: splitting and evaluation functions for the doubly robust estimator.
-  + `EstGTempFunc.R`: splitting and evaluation functions for the G-computation estimator.
+  + `EstGTempFunc.R`: splitting and evaluation functions for the G-formula estimator.
   + `EstIpwTempFunc.R`: splitting and evaluation functions for the inverse probability weighting estimator.
   + `EvalMeas.R`: functions to evaluate final trees with the evaluation criteria described in paper.
   + `iTemp.R`: initialization function.
   + `library.R`: install required libraries, if not yet installed, and load the libraries.
   + `pruning.R`: build a maximum sized tree and create a sequence of candidate trees for final tree selection.
-  + `SimData.R`: generate data under different settings.
+  + `SimData.R`: generate data under different data generating distribution.
 
-* `seed1000.rda`: seeds for generating the data in simulations. The first 1000 seeds were used to generate data for the paper.
+* `seed1000.rda`: seeds for generating the data in simulations.
 
-* `Appendix/`: Additional code to run simulations in the appendices.
+* `Appendix/`: Additional code to run simulations in Web Appendices.
 
 * `Data/`: data for simulation results.
   
 * `Results/`: code to generate figures and tables in the paper.
-  + `main.R`: Figure 1 and Table 1 in the main manuscript.
+  + `main_AppendixC3.R`: Figure 1, Table 1 and Table S2.
   
   
   
