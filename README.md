@@ -2,11 +2,13 @@
 
 Code for paper "Causal Interaction Trees: Tree-Based Subgroup Identification for Observational Data" ([arXiv link](https://arxiv.org/abs/2003.03042)).
 
-* `main/`: code to run simulations in the main manuscript.
-  + `MainSimulationsCt.R`: run causal tree algorithms.
-  + `MainSimulationsIpw.R`: run inverse probability weighting interaction trees.
-  + `MainSimulationsG.R`: run G-computation interaction trees.
-  + `MainSimulationsDr.R`: run doubly robust interaction trees.
+* `main/`: code for simulations and data analysis in the main manuscript.
+  * Simulations:
+    + `CausalTreeOriginal.R`: run Original Causal Tree algorithms.
+    + `CausalTreeBest.R`: run Best Causal Tree algorithms.
+    + `MainIpw.R`: run inverse probability weighting interaction trees.
+    + `MainG.R`: run G-formula Causal Interaction Tree algorithms.
+    + `MainDr.R`: run Doubly Robust Causal Interaction Tree algorithms.
   
 * `Functions/`: functions to implement the Inverse Probability Weighting, G-computation, and Doubly Robust Interaction trees.
   + `CvMethod1.R`: functions for the main final tree selection with different estimators. 
