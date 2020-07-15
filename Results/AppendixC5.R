@@ -1,211 +1,365 @@
-library(dplyr)
 library(ggplot2)
+library(dplyr)
+library(tidyr)
+library(xtable)
 
-##################################################################################################
-######################################## Out (Appendix C.5) ######################################
-##################################################################################################
-load("../Data/AppendixC5Out.RData")
+# best ct
+load("../Data/main/CausalTreeBest.RData")
+performance.best.ct <- performance.ct
+dim(performance.best.ct)
 
-res.select <- res %>% 
-  filter(Method %in% c("True.NoHonest", "Noisy.NoHonest", "Misspecified.NoHonest", 
-                       "Out.True.CV1", "Out.Noisy.CV1", "Out.Misspecified.CV1", 
-                       "Out.TrueIPW.TrueAdj.CV1", "Out.NoisyIPW.TrueAdj.CV1",
-                       "Out.TrueIPW.NoisyAdj.CV1", "Out.NoisyIPW.NoisyAdj.CV1",
-                       "Out.MisspecifiedIPW.MisspecifiedAdj.CV1",
-                       "Out.True.CV2", "Out.Noisy.CV2", "Out.Misspecified.CV2", 
-                       "Out.TrueIPW.TrueAdj.CV2", "Out.NoisyIPW.TrueAdj.CV2",
-                       "Out.TrueIPW.NoisyAdj.CV2", "Out.NoisyIPW.NoisyAdj.CV2",
-                       "Out.MisspecifiedIPW.MisspecifiedAdj.CV2")) 
+# out
+load("../Data/AppendixC5/OutIpw.RData")
+load("../Data/AppendixC5/OutG.RData")
+load("../Data/AppendixC5/OutDr.RData")
 
-res.select <- res.select %>%
-  mutate(Method = paste(est.mthd, Method, sep = " ")) 
+performance.ipw <- performance.ipwOut
+performance.g   <- performance.gOut
+performance.dr  <- performance.drOut
 
-res.select <- res.select %>% 
-  mutate(Algorithm = ifelse(est.mthd == "CT", "Best CT", NA)) %>%
-  mutate(Algorithm = ifelse(grepl("CV1", Method), "Main FTS", Algorithm)) %>%
-  mutate(Algorithm = ifelse(grepl("CV2", Method), "Alternative FTS", Algorithm)) %>%
-  mutate(Method = ifelse(Method == "CT Misspecified.NoHonest", "Misspecified CT", Method)) %>%
-  mutate(Method = ifelse(Method == "CT Noisy.NoHonest", "CT", Method)) %>%
-  mutate(Method = ifelse(Method == "CT True.NoHonest", "True CT", Method)) %>%
-  mutate(Method = ifelse(grepl("IPW Out.Misspecified", Method), "Misspecified IPW", Method)) %>%
-  mutate(Method = ifelse(grepl("IPW Out.Noisy", Method), "IPW", Method)) %>%
-  mutate(Method = ifelse(grepl("IPW Out.True", Method), "True IPW", Method)) %>%
-  mutate(Method = ifelse(grepl("G Out.Misspecified", Method), "Misspecified G", Method)) %>%
-  mutate(Method = ifelse(grepl("G Out.Noisy", Method), "G", Method)) %>%
-  mutate(Method = ifelse(grepl("G Out.True", Method), "True G", Method)) %>%
-  mutate(Method = ifelse(grepl("DR Out.NoisyIPW.NoisyAdj", Method), "DR", Method)) %>%
-  mutate(Method = ifelse(grepl("DR Out.TrueIPW.NoisyAdj", Method), "True.Propensity DR", Method)) %>%
-  mutate(Method = ifelse(grepl("DR Out.NoisyIPW.TrueAdj", Method), "True.Mean DR", Method)) %>%
-  mutate(Method = ifelse(grepl("DR Out.TrueIPW.TrueAdj", Method), "Both True DR", Method)) %>%
-  mutate(Method = ifelse(grepl("DR Out.MisspecifiedIPW.MisspecifiedAdj", Method), "Both Misspecified DR", Method))             
+performance.best.ct <- rbind(performance.best.ct[, 8 * 0 + 1:8],
+                             performance.best.ct[, 8 * 2 + 1:8],
+                             performance.best.ct[, 8 * 4 + 1:8],
+                             cbind(performance.best.ct[, 8 * 6 + 7 * 0 + 1:7], NA),
+                             cbind(performance.best.ct[, 8 * 6 + 7 * 2 + 1:7], NA),
+                             cbind(performance.best.ct[, 8 * 6 + 7 * 4 + 1:7], NA))
 
-res.select <- res.select %>%
-  mutate(Method    = factor(Method)) %>%
-  mutate(Algorithm = factor(Algorithm))
-res.select <- res.select %>%
-  mutate(Method    = factor(Method, levels(res.select$Method)[c(7, 3, 10, 9, 6, 12, 8, 5, 11, 1, 4, 14, 13, 2)])) %>%
-  mutate(setting   = factor(setting, levels(res.select$setting)[c(2, 1)])) %>%
-  mutate(Algorithm = factor(Algorithm, levels(res.select$Algorithm)[c(2, 3, 1)]))
-levels(res.select$Method) <- c("Mis Cov CT", "Mis Func CT", "True CT", 
-                               "Mis Cov IPW", "Mis Func IPW", "True IPW",
-                               "Mis Cov G", "Mis Func G", "True G",
-                               "Both Mis Cov DR", "Both Mis Func DR", "True Prop Mis Func Out DR",
-                               "True Out Mis Func Prop DR", "Both True DR")
+performance.ipw <- rbind(performance.ipw[, 8 * 0 + 1:8],
+                         performance.ipw[, 8 * 1 + 1:8],
+                         performance.ipw[, 8 * 2 + 1:8],
+                         performance.ipw[, 8 * 3 + 1:8],
+                         performance.ipw[, 8 * 4 + 1:8],
+                         performance.ipw[, 8 * 5 + 1:8],
+                         cbind(performance.ipw[, 8 * 6 + 7 * 0 + 1:7], NA),
+                         cbind(performance.ipw[, 8 * 6 + 7 * 1 + 1:7], NA),
+                         cbind(performance.ipw[, 8 * 6 + 7 * 2 + 1:7], NA),
+                         cbind(performance.ipw[, 8 * 6 + 7 * 3 + 1:7], NA),
+                         cbind(performance.ipw[, 8 * 6 + 7 * 4 + 1:7], NA),
+                         cbind(performance.ipw[, 8 * 6 + 7 * 5 + 1:7], NA))
+performance.g <- rbind(performance.g[, 8 * 0 + 1:8],
+                       performance.g[, 8 * 1 + 1:8],
+                       performance.g[, 8 * 2 + 1:8],
+                       performance.g[, 8 * 3 + 1:8],
+                       performance.g[, 8 * 4 + 1:8],
+                       performance.g[, 8 * 5 + 1:8],
+                       cbind(performance.g[, 8 * 6 + 7 * 0 + 1:7], NA),
+                       cbind(performance.g[, 8 * 6 + 7 * 1 + 1:7], NA),
+                       cbind(performance.g[, 8 * 6 + 7 * 2 + 1:7], NA),
+                       cbind(performance.g[, 8 * 6 + 7 * 3 + 1:7], NA),
+                       cbind(performance.g[, 8 * 6 + 7 * 4 + 1:7], NA),
+                       cbind(performance.g[, 8 * 6 + 7 * 5 + 1:7], NA))
+performance.dr <- rbind(performance.dr[, 8 * 0 + 1:8],
+                        performance.dr[, 8 * 1 + 1:8],
+                        performance.dr[, 8 * 2 + 1:8],
+                        performance.dr[, 8 * 3 + 1:8],
+                        performance.dr[, 8 * 4 + 1:8],
+                        performance.dr[, 8 * 5 + 1:8],
+                        performance.dr[, 8 * 6 + 1:8],
+                        performance.dr[, 8 * 7 + 1:8],
+                        performance.dr[, 8 * 8 + 1:8],
+                        performance.dr[, 8 * 9 + 1:8],
+                        cbind(performance.dr[, 8 * 10 + 7 * 0 + 1:7], NA),
+                        cbind(performance.dr[, 8 * 10 + 7 * 1 + 1:7], NA),
+                        cbind(performance.dr[, 8 * 10 + 7 * 2 + 1:7], NA),
+                        cbind(performance.dr[, 8 * 10 + 7 * 3 + 1:7], NA),
+                        cbind(performance.dr[, 8 * 10 + 7 * 4 + 1:7], NA),
+                        cbind(performance.dr[, 8 * 10 + 7 * 5 + 1:7], NA),
+                        cbind(performance.dr[, 8 * 10 + 7 * 6 + 1:7], NA),
+                        cbind(performance.dr[, 8 * 10 + 7 * 7 + 1:7], NA),
+                        cbind(performance.dr[, 8 * 10 + 7 * 8 + 1:7], NA),
+                        cbind(performance.dr[, 8 * 10 + 7 * 9 + 1:7], NA))
 
+performance.all <- rbind(performance.best.ct, 
+                         performance.ipw,
+                         performance.g,
+                         performance.dr)
+rm(performance.best.ct, performance.ct,
+   performance.ipw, performance.g, performance.dr,
+   performance.ipwOut, performance.gOut, performance.drOut)
+dim(performance.all)
+colnames(performance.all)
+colnames(performance.all) <- gsub("hetero.propsc.true.nohonest.", "", colnames(performance.all))
+
+# scenarios
+algorithm <- c("Best CT")
+setting   <- c("Heterogeneous", "Homogeneous")
+Method    <- c("True", "Mis Func", "Unmeasured Cov")
+
+scnrs.ct <- expand.grid(Method, setting, algorithm)
+colnames(scnrs.ct) <- c("Method", "setting", "algorithm")
+
+algorithm <- c("Main FTS", "Alternative FTS")
+setting   <- c("Heterogeneous", "Homogeneous")
+Method   <- c("True IPW-CIT", "Mis Func IPW-CIT", "Unmeasured Cov IPW-CIT", 
+              "True G-CIT", "Mis Func G-CIT", "Unmeasured Cov G-CIT", 
+              "Both True DR-CIT", "True Out Mis Func Prop DR-CIT", "True Prop Mis Func Out DR-CIT", "Both Mis Func DR-CIT", "Both Unmeasured Cov DR-CIT")
+scnrs.cit <- expand.grid(Method, setting, algorithm)
+scnrs.cit <- scnrs.cit[c(1:3, 1:3 + 22, 12:14, 12:14 + 22, 
+                         4:6, 4:6 + 22, 15:17, 15:17 + 22, 
+                         7:11, 7:11 + 22, 18:22, 18:22 + 22), ]
+colnames(scnrs.cit) <- c("Method", "setting", "algorithm")
+
+scnrs <- rbind(scnrs.ct, scnrs.cit)
+performance.all <- cbind(scnrs[c(rep(1:nrow(scnrs.ct), each = 10^4), 
+                                 rep((nrow(scnrs.ct)+1):nrow(scnrs), each = 10^3)), ],
+                         performance.all)
+
+# relevel factors
+performance.all <- performance.all %>%
+  mutate(Method    = factor(Method, c("Unmeasured Cov", "Mis Func", "True", 
+                                      "Unmeasured Cov IPW-CIT", "Mis Func IPW-CIT", "True IPW-CIT", 
+                                      "Unmeasured Cov G-CIT", "Mis Func G-CIT", "True G-CIT", 
+                                      "Both Unmeasured Cov DR-CIT", "Both Mis Func DR-CIT", "True Prop Mis Func Out DR-CIT", "True Out Mis Func Prop DR-CIT", "Both True DR-CIT")),
+         setting   = factor(setting, c("Homogeneous", "Heterogeneous")),
+         algorithm = factor(algorithm, c("Best CT", "Main FTS", "Alternative FTS")))
+
+performance.all <- performance.all %>%
+  mutate(est.mthd = ifelse(algorithm == "Best CT", "CT", NA)) %>%
+  mutate(est.mthd = ifelse(grepl("IPW-CIT", Method), "IPW-CIT", est.mthd)) %>%
+  mutate(est.mthd = ifelse(grepl("G-CIT", Method), "G-CIT", est.mthd)) %>%
+  mutate(est.mthd = ifelse(grepl("DR-CIT", Method), "DR-CIT", est.mthd))
+performance.all <- performance.all %>%
+  mutate(est.mthd = factor(est.mthd, c("CT", "IPW-CIT", "G-CIT", "DR-CIT")))
+
+# plot
 cbbPalette <- c("#999999", "#E69F00", "#56B4E9", "#009E73", "#0072B2", "#D55E00", "#CC79A7", "#F0E442")
 
-ggplot(res.select, aes(Method, mse)) +
-  geom_boxplot(outlier.size = 0.9, aes(color = est.mthd)) + 
+# Figure S4
+ggplot(performance.all, aes(Method, mse)) +
+  geom_boxplot(outlier.size = 0.6, aes(color = est.mthd)) + 
   ylab("MSE") + 
-  facet_grid(setting ~ Algorithm, scales = "free_x", space = "free_x") +
+  ggtitle("When models are fitted using the whole dataset") +
+  facet_grid(setting ~ algorithm, scales = "free_x", space = "free_x") +
   theme_bw() +
   theme(axis.text.x = element_text(angle = 90, hjust = 1)) +
-  scale_y_log10(limits = c(2e-9, 2e4)) +
+  scale_y_log10(limits = c(6.22e-13, 1.86e6)) +
+  # scale_y_log10() +
   scale_colour_manual(values = cbbPalette, 
-                      name = "Algorithms", 
-                      breaks = c("CT", "IPW", "G", "DR"),
-                      labels = c("CT", "IPW", "G", "DR")) + 
-  theme(legend.position = "bottom") +
-  ggtitle("When models are fitted using the whole dataset")
+                      name = "Algorithms") + 
+  theme(legend.position = "bottom")
 
+# Table S4
 summ.select <- NULL
-for (i in c(5, 8, 9, 16, 17)){
+for (i in c(5, 8:11)) {
   summ.select <- cbind(summ.select,
-                       tapply(res.select[, i], 
-                              paste(res.select$setting, res.select$Algorithm, res.select$Method, sep = " "), 
-                              mean, 
-                              na.rm = T))
+                       tapply(performance.all[, i],
+                              paste(performance.all$setting, performance.all$algorithm, performance.all$Method, sep = " "),
+                              mean))
   
 }
-colnames(summ.select) <- colnames(res.select)[c(5, 8, 9, 16, 17)]
-summ.select <- summ.select[c(c(5, 7, 9, 4, 6, 8, 1, 2, 11, 10, 3) + 14 + 25, c(5, 7, 9, 4, 6, 8, 1, 2, 11, 10, 3) + 25, c(5, 7, 9, 4, 6, 8, 1, 2, 11, 10, 3) + 14, c(5, 7, 9, 4, 6, 8, 1, 2, 11, 10, 3)), ]
+colnames(summ.select) <- colnames(performance.all)[c(5, 8:11)]
+summ.select <- summ.select[c(c(c(11, 5, 7), c(11, 5, 7) - 1, c(3, 1, 9, 8, 2)) + 14 + 11 + 14,
+                             c(c(11, 5, 7), c(11, 5, 7) - 1, c(3, 1, 9, 8, 2)) + 14 + 11,
+                             c(c(11, 5, 7), c(11, 5, 7) - 1, c(3, 1, 9, 8, 2)) + 14,
+                             c(c(11, 5, 7), c(11, 5, 7) - 1, c(3, 1, 9, 8, 2))), ]
+round(summ.select, 2)
 
-# Generate the table in latex code for paper
+# Generate the Latex code
 summ.latex <- data.frame(Method = rownames(summ.select),
                          round(summ.select, 2))
 summ.latex <- summ.latex %>%
   mutate(Method = sub("Homogeneous ", "", Method)) %>%
   mutate(Method = sub("Heterogeneous ", "", Method))
 summ.latex <- summ.latex %>%
-  mutate(Estimator = ifelse(grepl("IPW", Method), "IPW", NA)) %>%
-  mutate(Estimator = ifelse(grepl("G", Method), "G", Estimator)) %>%
-  mutate(Estimator = ifelse(grepl("DR", Method), "DR", Estimator))
+  mutate(Estimator = ifelse(grepl("IPW", Method), "IPW-CIT", NA)) %>%
+  mutate(Estimator = ifelse(grepl("G", Method), "G-CIT", Estimator)) %>%
+  mutate(Estimator = ifelse(grepl("DR", Method), "DR-CIT", Estimator)) 
 summ.latex <- summ.latex %>%
-  mutate(Method = sub(" IPW", "", Method)) %>%
-  mutate(Method = sub(" G", "", Method)) %>%
-  mutate(Method = sub(" DR", "", Method)) %>%
-  mutate(Method = sub("Main FTS ", "", Method)) %>%
+  mutate(Method = sub("Main FTS", "", Method)) %>%
   mutate(Method = sub("Alternative FTS", "", Method))
+summ.latex <- summ.latex %>%
+  mutate(Method = sub(" IPW-CIT", "", Method)) %>%
+  mutate(Method = sub(" G-CIT", "", Method)) %>%
+  mutate(Method = sub(" DR-CIT", "", Method)) 
+# mutate(Method = sub(" CT", "", Method))
 summ.latex <- summ.latex[, c(7, 1:6)]
 
-summ.latex <- data.frame(summ.latex[1:22, ], NA, summ.latex[23:44, 3:7])
+summ.latex <- data.frame(summ.latex[1:22, ], NA, summ.latex[23:44, 3:ncol(summ.latex)])
 summ.latex <- summ.latex %>%
-  select(-corr.frst.splt)
+  dplyr::select(-corr.frst.splt)
 
 print(xtable(summ.latex), include.rownames=FALSE)
 
-##################################################################################################
-####################################### Insplit (Appendix C.5) ###################################
-##################################################################################################
-load("../Data/AppendixC5Insplit.RData")
 
-res.select <- res %>% 
-  filter(Method %in% c("True.NoHonest", "Noisy.NoHonest", "Misspecified.NoHonest", 
-                       "InSplit.True.CV1", "InSplit.Noisy.CV1", "InSplit.Misspecified.CV1", 
-                       "InSplit.TrueIPW.TrueAdj.CV1", "InSplit.NoisyIPW.TrueAdj.CV1",
-                       "InSplit.TrueIPW.NoisyAdj.CV1", "InSplit.NoisyIPW.NoisyAdj.CV1",
-                       "InSplit.MisspecifiedIPW.MisspecifiedAdj.CV1",
-                       "InSplit.True.CV2", "InSplit.Noisy.CV2", "InSplit.Misspecified.CV2", 
-                       "InSplit.TrueIPW.TrueAdj.CV2", "InSplit.NoisyIPW.TrueAdj.CV2",
-                       "InSplit.TrueIPW.NoisyAdj.CV2", "InSplit.NoisyIPW.NoisyAdj.CV2",
-                       "InSplit.MisspecifiedIPW.MisspecifiedAdj.CV2")) 
 
-res.select <- res.select %>%
-  mutate(Method = paste(est.mthd, Method, sep = " ")) 
+# In Split
+# best ct
+load("../Data/main/CausalTreeBest.RData")
+performance.best.ct <- performance.ct
+dim(performance.best.ct)
 
-res.select <- res.select %>% 
-  mutate(Algorithm = ifelse(est.mthd == "CT", "Best CT", NA)) %>%
-  mutate(Algorithm = ifelse(grepl("CV1", Method), "Main FTS", Algorithm)) %>%
-  mutate(Algorithm = ifelse(grepl("CV2", Method), "Alternative FTS", Algorithm)) %>%
-  mutate(Method = ifelse(Method == "CT Misspecified.NoHonest", "Misspecified CT", Method)) %>%
-  mutate(Method = ifelse(Method == "CT Noisy.NoHonest", "CT", Method)) %>%
-  mutate(Method = ifelse(Method == "CT True.NoHonest", "True CT", Method)) %>%
-  mutate(Method = ifelse(grepl("IPW InSplit.Misspecified", Method), "Misspecified IPW", Method)) %>%
-  mutate(Method = ifelse(grepl("IPW InSplit.Noisy", Method), "IPW", Method)) %>%
-  mutate(Method = ifelse(grepl("IPW InSplit.True", Method), "True IPW", Method)) %>%
-  mutate(Method = ifelse(grepl("G InSplit.Misspecified", Method), "Misspecified G", Method)) %>%
-  mutate(Method = ifelse(grepl("G InSplit.Noisy", Method), "G", Method)) %>%
-  mutate(Method = ifelse(grepl("G InSplit.True", Method), "True G", Method)) %>%
-  mutate(Method = ifelse(grepl("DR InSplit.NoisyIPW.NoisyAdj", Method), "DR", Method)) %>%
-  mutate(Method = ifelse(grepl("DR InSplit.TrueIPW.NoisyAdj", Method), "True.Propensity DR", Method)) %>%
-  mutate(Method = ifelse(grepl("DR InSplit.NoisyIPW.TrueAdj", Method), "True.Mean DR", Method)) %>%
-  mutate(Method = ifelse(grepl("DR InSplit.TrueIPW.TrueAdj", Method), "Both True DR", Method)) %>%
-  mutate(Method = ifelse(grepl("DR InSplit.MisspecifiedIPW.MisspecifiedAdj", Method), "Both Misspecified DR", Method))             
+# split
+load("../Data/AppendixC5/SplitIpw.RData")
+load("../Data/AppendixC5/SplitG.RData")
+load("../Data/AppendixC5/SplitDr.RData")
 
-res.select <- res.select %>%
-  mutate(Method    = factor(Method)) %>%
-  mutate(Algorithm = factor(Algorithm))
-res.select <- res.select %>%
-  mutate(Method    = factor(Method, levels(res.select$Method)[c(7, 3, 10, 9, 6, 12, 8, 5, 11, 1, 4, 14, 13, 2)])) %>%
-  mutate(setting   = factor(setting, levels(res.select$setting)[c(2, 1)])) %>%
-  mutate(Algorithm = factor(Algorithm, levels(res.select$Algorithm)[c(2, 3, 1)]))
-levels(res.select$Method) <- c("Mis Cov CT", "Mis Func CT", "True CT", 
-                               "Mis Cov IPW", "Mis Func IPW", "True IPW",
-                               "Mis Cov G", "Mis Func G", "True G",
-                               "Both Mis Cov DR", "Both Mis Func DR", "True Prop Mis Func Out DR",
-                               "True Out Mis Func Prop DR", "Both True DR")
+performance.ipw <- performance.ipwInsplt
+performance.g   <- performance.gInsplt
+performance.dr  <- performance.drInsplt
 
+performance.best.ct <- rbind(performance.best.ct[, 8 * 0 + 1:8],
+                             performance.best.ct[, 8 * 2 + 1:8],
+                             performance.best.ct[, 8 * 4 + 1:8],
+                             cbind(performance.best.ct[, 8 * 6 + 7 * 0 + 1:7], NA),
+                             cbind(performance.best.ct[, 8 * 6 + 7 * 2 + 1:7], NA),
+                             cbind(performance.best.ct[, 8 * 6 + 7 * 4 + 1:7], NA))
+
+performance.ipw <- rbind(performance.ipw[, 8 * 0 + 1:8],
+                         performance.ipw[, 8 * 1 + 1:8],
+                         performance.ipw[, 8 * 2 + 1:8],
+                         performance.ipw[, 8 * 3 + 1:8],
+                         performance.ipw[, 8 * 4 + 1:8],
+                         performance.ipw[, 8 * 5 + 1:8],
+                         cbind(performance.ipw[, 8 * 6 + 7 * 0 + 1:7], NA),
+                         cbind(performance.ipw[, 8 * 6 + 7 * 1 + 1:7], NA),
+                         cbind(performance.ipw[, 8 * 6 + 7 * 2 + 1:7], NA),
+                         cbind(performance.ipw[, 8 * 6 + 7 * 3 + 1:7], NA),
+                         cbind(performance.ipw[, 8 * 6 + 7 * 4 + 1:7], NA),
+                         cbind(performance.ipw[, 8 * 6 + 7 * 5 + 1:7], NA))
+performance.g <- rbind(performance.g[, 8 * 0 + 1:8],
+                       performance.g[, 8 * 1 + 1:8],
+                       performance.g[, 8 * 2 + 1:8],
+                       performance.g[, 8 * 3 + 1:8],
+                       performance.g[, 8 * 4 + 1:8],
+                       performance.g[, 8 * 5 + 1:8],
+                       cbind(performance.g[, 8 * 6 + 7 * 0 + 1:7], NA),
+                       cbind(performance.g[, 8 * 6 + 7 * 1 + 1:7], NA),
+                       cbind(performance.g[, 8 * 6 + 7 * 2 + 1:7], NA),
+                       cbind(performance.g[, 8 * 6 + 7 * 3 + 1:7], NA),
+                       cbind(performance.g[, 8 * 6 + 7 * 4 + 1:7], NA),
+                       cbind(performance.g[, 8 * 6 + 7 * 5 + 1:7], NA))
+performance.dr <- rbind(performance.dr[, 8 * 0 + 1:8],
+                        performance.dr[, 8 * 1 + 1:8],
+                        performance.dr[, 8 * 2 + 1:8],
+                        performance.dr[, 8 * 3 + 1:8],
+                        performance.dr[, 8 * 4 + 1:8],
+                        performance.dr[, 8 * 5 + 1:8],
+                        performance.dr[, 8 * 6 + 1:8],
+                        performance.dr[, 8 * 7 + 1:8],
+                        performance.dr[, 8 * 8 + 1:8],
+                        performance.dr[, 8 * 9 + 1:8],
+                        cbind(performance.dr[, 8 * 10 + 7 * 0 + 1:7], NA),
+                        cbind(performance.dr[, 8 * 10 + 7 * 1 + 1:7], NA),
+                        cbind(performance.dr[, 8 * 10 + 7 * 2 + 1:7], NA),
+                        cbind(performance.dr[, 8 * 10 + 7 * 3 + 1:7], NA),
+                        cbind(performance.dr[, 8 * 10 + 7 * 4 + 1:7], NA),
+                        cbind(performance.dr[, 8 * 10 + 7 * 5 + 1:7], NA),
+                        cbind(performance.dr[, 8 * 10 + 7 * 6 + 1:7], NA),
+                        cbind(performance.dr[, 8 * 10 + 7 * 7 + 1:7], NA),
+                        cbind(performance.dr[, 8 * 10 + 7 * 8 + 1:7], NA),
+                        cbind(performance.dr[, 8 * 10 + 7 * 9 + 1:7], NA))
+
+performance.all <- rbind(performance.best.ct, 
+                         performance.ipw,
+                         performance.g,
+                         performance.dr)
+rm(performance.best.ct, performance.ct,
+   performance.ipw, performance.g, performance.dr,
+   performance.ipwInsplt, performance.gInsplt, performance.drInsplt)
+dim(performance.all)
+colnames(performance.all)
+colnames(performance.all) <- gsub("hetero.propsc.true.nohonest.", "", colnames(performance.all))
+
+# scenarios
+algorithm <- c("Best CT")
+setting   <- c("Heterogeneous", "Homogeneous")
+Method    <- c("True", "Mis Func", "Unmeasured Cov")
+
+scnrs.ct <- expand.grid(Method, setting, algorithm)
+colnames(scnrs.ct) <- c("Method", "setting", "algorithm")
+
+algorithm <- c("Main FTS", "Alternative FTS")
+setting   <- c("Heterogeneous", "Homogeneous")
+Method   <- c("True IPW-CIT", "Mis Func IPW-CIT", "Unmeasured Cov IPW-CIT", 
+              "True G-CIT", "Mis Func G-CIT", "Unmeasured Cov G-CIT", 
+              "Both True DR-CIT", "True Out Mis Func Prop DR-CIT", "True Prop Mis Func Out DR-CIT", "Both Mis Func DR-CIT", "Both Unmeasured Cov DR-CIT")
+scnrs.cit <- expand.grid(Method, setting, algorithm)
+scnrs.cit <- scnrs.cit[c(1:3, 1:3 + 22, 12:14, 12:14 + 22, 
+                         4:6, 4:6 + 22, 15:17, 15:17 + 22, 
+                         7:11, 7:11 + 22, 18:22, 18:22 + 22), ]
+colnames(scnrs.cit) <- c("Method", "setting", "algorithm")
+
+scnrs <- rbind(scnrs.ct, scnrs.cit)
+performance.all <- cbind(scnrs[c(rep(1:nrow(scnrs.ct), each = 10^4), 
+                                 rep((nrow(scnrs.ct)+1):nrow(scnrs), each = 10^3)), ],
+                         performance.all)
+
+# relevel factors
+performance.all <- performance.all %>%
+  mutate(Method    = factor(Method, c("Unmeasured Cov", "Mis Func", "True", 
+                                      "Unmeasured Cov IPW-CIT", "Mis Func IPW-CIT", "True IPW-CIT", 
+                                      "Unmeasured Cov G-CIT", "Mis Func G-CIT", "True G-CIT", 
+                                      "Both Unmeasured Cov DR-CIT", "Both Mis Func DR-CIT", "True Prop Mis Func Out DR-CIT", "True Out Mis Func Prop DR-CIT", "Both True DR-CIT")),
+         setting   = factor(setting, c("Homogeneous", "Heterogeneous")),
+         algorithm = factor(algorithm, c("Best CT", "Main FTS", "Alternative FTS")))
+
+performance.all <- performance.all %>%
+  mutate(est.mthd = ifelse(algorithm == "Best CT", "CT", NA)) %>%
+  mutate(est.mthd = ifelse(grepl("IPW-CIT", Method), "IPW-CIT", est.mthd)) %>%
+  mutate(est.mthd = ifelse(grepl("G-CIT", Method), "G-CIT", est.mthd)) %>%
+  mutate(est.mthd = ifelse(grepl("DR-CIT", Method), "DR-CIT", est.mthd))
+performance.all <- performance.all %>%
+  mutate(est.mthd = factor(est.mthd, c("CT", "IPW-CIT", "G-CIT", "DR-CIT")))
+
+# plot
 cbbPalette <- c("#999999", "#E69F00", "#56B4E9", "#009E73", "#0072B2", "#D55E00", "#CC79A7", "#F0E442")
 
-ggplot(res.select, aes(Method, mse)) +
-  geom_boxplot(outlier.size = 0.9, aes(color = est.mthd)) + 
+# Figure S5
+ggplot(performance.all, aes(Method, mse)) +
+  geom_boxplot(outlier.size = 0.6, aes(color = est.mthd)) + 
   ylab("MSE") + 
-  facet_grid(setting ~ Algorithm, scales = "free_x", space = "free_x") +
+  ggtitle("When models are fitted separately within each child node") +
+  facet_grid(setting ~ algorithm, scales = "free_x", space = "free_x") +
   theme_bw() +
   theme(axis.text.x = element_text(angle = 90, hjust = 1)) +
-  scale_y_log10(limits = c(2e-9, 2e4)) +
+  scale_y_log10(limits = c(6.22e-13, 1.86e6)) +
+  # scale_y_log10() +
   scale_colour_manual(values = cbbPalette, 
-                      name = "Algorithms", 
-                      breaks = c("CT", "IPW", "G", "DR"),
-                      labels = c("CT", "IPW", "G", "DR")) + 
-  theme(legend.position = "bottom") +
-  ggtitle("When models are fitted separately in the left and right subgroups")
+                      name = "Algorithms") + 
+  theme(legend.position = "bottom")
 
+# Table S5
 summ.select <- NULL
-for (i in c(5, 8, 9, 16, 17)){
+for (i in c(5, 8:11)) {
   summ.select <- cbind(summ.select,
-                       tapply(res.select[, i], 
-                              paste(res.select$setting, res.select$Algorithm, res.select$Method, sep = " "), 
-                              mean, 
-                              na.rm = T))
+                       tapply(performance.all[, i],
+                              paste(performance.all$setting, performance.all$algorithm, performance.all$Method, sep = " "),
+                              mean))
   
 }
-colnames(summ.select) <- colnames(res.select)[c(5, 8, 9, 16, 17)]
-summ.select <- summ.select[c(c(5, 7, 9, 4, 6, 8, 1, 2, 11, 10, 3) + 14 + 25, c(5, 7, 9, 4, 6, 8, 1, 2, 11, 10, 3) + 25, c(5, 7, 9, 4, 6, 8, 1, 2, 11, 10, 3) + 14, c(5, 7, 9, 4, 6, 8, 1, 2, 11, 10, 3)), ]
+colnames(summ.select) <- colnames(performance.all)[c(5, 8:11)]
+summ.select <- summ.select[c(c(c(11, 5, 7), c(11, 5, 7) - 1, c(3, 1, 9, 8, 2)) + 14 + 11 + 14,
+                             c(c(11, 5, 7), c(11, 5, 7) - 1, c(3, 1, 9, 8, 2)) + 14 + 11,
+                             c(c(11, 5, 7), c(11, 5, 7) - 1, c(3, 1, 9, 8, 2)) + 14,
+                             c(c(11, 5, 7), c(11, 5, 7) - 1, c(3, 1, 9, 8, 2))), ]
+round(summ.select, 2)
 
-# Generate the table in latex code for paper
+# Generate the Latex code
 summ.latex <- data.frame(Method = rownames(summ.select),
                          round(summ.select, 2))
 summ.latex <- summ.latex %>%
   mutate(Method = sub("Homogeneous ", "", Method)) %>%
   mutate(Method = sub("Heterogeneous ", "", Method))
 summ.latex <- summ.latex %>%
-  mutate(Estimator = ifelse(grepl("IPW", Method), "IPW", NA)) %>%
-  mutate(Estimator = ifelse(grepl("G", Method), "G", Estimator)) %>%
-  mutate(Estimator = ifelse(grepl("DR", Method), "DR", Estimator))
+  mutate(Estimator = ifelse(grepl("IPW", Method), "IPW-CIT", NA)) %>%
+  mutate(Estimator = ifelse(grepl("G", Method), "G-CIT", Estimator)) %>%
+  mutate(Estimator = ifelse(grepl("DR", Method), "DR-CIT", Estimator)) 
 summ.latex <- summ.latex %>%
-  mutate(Method = sub(" IPW", "", Method)) %>%
-  mutate(Method = sub(" G", "", Method)) %>%
-  mutate(Method = sub(" DR", "", Method)) %>%
-  mutate(Method = sub("Main FTS ", "", Method)) %>%
+  mutate(Method = sub("Main FTS", "", Method)) %>%
   mutate(Method = sub("Alternative FTS", "", Method))
+summ.latex <- summ.latex %>%
+  mutate(Method = sub(" IPW-CIT", "", Method)) %>%
+  mutate(Method = sub(" G-CIT", "", Method)) %>%
+  mutate(Method = sub(" DR-CIT", "", Method)) 
+# mutate(Method = sub(" CT", "", Method))
 summ.latex <- summ.latex[, c(7, 1:6)]
 
-summ.latex <- data.frame(summ.latex[1:22, ], NA, summ.latex[23:44, 3:7])
+summ.latex <- data.frame(summ.latex[1:22, ], NA, summ.latex[23:44, 3:ncol(summ.latex)])
 summ.latex <- summ.latex %>%
-  select(-corr.frst.splt)
+  dplyr::select(-corr.frst.splt)
 
 print(xtable(summ.latex), include.rownames=FALSE)
+
 
 
 

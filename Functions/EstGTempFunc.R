@@ -1,4 +1,6 @@
-calc.g.trt.eff <- function(data.node, x, ux, est.cond.eff.0, est.cond.eff.1, adj.mthd, adj.form.true, type.var = "cont"){
+calc.g.trt.eff <- function(data.node, x, ux, est.cond.eff.0, est.cond.eff.1, 
+                           adj.mod.loc, adj.mthd, adj.form.true, type.var, 
+                           whl.est.cond.eff.0, whl.est.cond.eff.1){
   
   # calculates ipw mean response difference between treatment and control for each level of x 
   # when x is categorical and the outcome is continuous.
@@ -12,33 +14,57 @@ calc.g.trt.eff <- function(data.node, x, ux, est.cond.eff.0, est.cond.eff.1, adj
   for (i in 1:length(ux)){
     
     data.sub.node      <- data.node[x == ux[i], ]
-    est.cond.eff.0.sub <- est.cond.eff.0[x == ux[i]]
-    est.cond.eff.1.sub <- est.cond.eff.1[x == ux[i]]
     
-    if (is.null(est.cond.eff.0)) { # when the conditional means are estimated within split
+    if (adj.mod.loc == "split") { # when the conditional means are estimated within split
       
-      tmp <- gen.fullrank.g(df            = data.sub.node,
-                            adj.form.true = adj.form.true)
-      
-      tmp <- try(est.cond.eff(df        = tmp$df.fullrank,
-                              method    = adj.mthd,
-                              form.true = tmp$adj.form.true.updated, 
-                              type.var  = type.var))
-      
-      # If all the covariates are deleted in df.fullrank, will include NA in the estimated trt.eff
-      if ("try-error" %in% class(tmp)) {
-        trt.eff <- c(trt.eff, NA)
-        next
+      if (length(unique(data.sub.node$A)) > 1) {
+        tmp <- gen.fullrank.g(df            = data.sub.node,
+                              adj.form.true = adj.form.true)
+        
+        tmp <- withWarnings(est.cond.eff(df        = tmp$df.fullrank,
+                                         method    = adj.mthd,
+                                         form.true = tmp$adj.form.true.updated, 
+                                         type.var  = type.var))
+        
+        # when the outcome model fitting produces warning
+        # use outside model fitting results for conditional means
+        if (!is.null(tmp$warnings)) {
+          
+          # when there is only rank-deficient warning, use the local prediction
+          cond.warnings <- T
+          for (warnings.i in 1:length(tmp$warnings)) {
+            cond.warnings <- cond.warnings & (tmp$warnings[[warnings.i]]$message == "prediction from a rank-deficient fit may be misleading")
+          }
+          
+          if (cond.warnings) {
+            est.cond.eff.1.sub <- tmp$value$pred.A.1
+            est.cond.eff.0.sub <- tmp$value$pred.A.0
+          } else {
+            est.cond.eff.1.sub <- whl.est.cond.eff.1[x == ux[i]]
+            est.cond.eff.0.sub <- whl.est.cond.eff.0[x == ux[i]]
+          }
+          
+        } else {
+          est.cond.eff.1.sub <- tmp$value$pred.A.1
+          est.cond.eff.0.sub <- tmp$value$pred.A.0
+        }
+        
+        mu.sub <- mean(est.cond.eff.1.sub) - mean(est.cond.eff.0.sub)
+      } else { # when there is only treated/untreated unit in that level, use avg.trt.effect for imputation
+        
+        est.cond.eff.1.sub <- whl.est.cond.eff.1[x == ux[i]]
+        est.cond.eff.0.sub <- whl.est.cond.eff.0[x == ux[i]]
+        mu.sub <- mean(est.cond.eff.1.sub) - mean(est.cond.eff.0.sub)
       }
       
-      est.cond.eff.1.sub <- tmp$pred.A.1
-      est.cond.eff.0.sub <- tmp$pred.A.0
+    } else { # if (is.null(est.cond.eff.0)) { 
       
+      est.cond.eff.0.sub <- est.cond.eff.0[x == ux[i]]
+      est.cond.eff.1.sub <- est.cond.eff.1[x == ux[i]]
+      mu.sub <- mean(est.cond.eff.1.sub) - mean(est.cond.eff.0.sub)
     }
     
-    trt.eff     <- c(trt.eff, 
-                     mean(est.cond.eff.1.sub) - mean(est.cond.eff.0.sub))
-    
+    trt.eff     <- c(trt.eff, mu.sub)
     
   } # for loop
   
@@ -92,37 +118,58 @@ stemp.g <- function(y, wt, x, parms, continuous){
   Y         <- parms$response[sub.ind]
   data.node <- data.frame(Y, A, sub.x)
   
-  est.cond.eff.1 <- parms$est.cond.eff.1[sub.ind]
-  est.cond.eff.0 <- parms$est.cond.eff.0[sub.ind]
-  w              <- parms$w[sub.ind, ]
+  whl.est.cond.eff.1 <- parms$whl.est.cond.eff.1[sub.ind]
+  whl.est.cond.eff.0 <- parms$whl.est.cond.eff.0[sub.ind]
+  whl.w              <- parms$whl.w[sub.ind, ]
+  whl.var.rb         <- parms$whl.var.rb
   
-  var.rb       <- parms$var.rb
-  adj.mthd     <- parms$adj.mthd
-  form.true    <- parms$form.true
-  mod.insplt   <- parms$mod.insplt
+  # created for categorical splits, sort categories
+  est.cond.eff.1 <- NULL
+  est.cond.eff.0 <- NULL
   
-  type.var     <- parms$type.var
-  num.truc.obs <- parms$num.truc.obs
-  
-  if (!is.null(mod.insplt)) {
-    if (!mod.insplt) {
+  if (parms$adj.mod.loc == "out") {
+    
+    est.cond.eff.1 <- whl.est.cond.eff.1
+    est.cond.eff.0 <- whl.est.cond.eff.0
+    w              <- whl.w
+    var.rb         <- whl.var.rb
+    
+  } else if (parms$adj.mod.loc == "node") {
+    
+    tmp <- gen.fullrank.g(df            = data.node,
+                          adj.form.true = parms$form.true)
+    tmp <- withWarnings(est.cond.eff(df        = tmp$df.fullrank,
+                                     method    = parms$adj.mthd,
+                                     form.true = tmp$adj.form.true.updated,
+                                     type.var  = parms$type.var))
+    var.rb <- tmp$value$var.rb
+    w      <- tmp$value$w
+    
+    # when the outcome model fitting produces warning
+    # use outside model fitting results for conditional means
+    if (!is.null(tmp$warnings)) {
       
-      tmp <- gen.fullrank.g(df            = data.node,
-                            adj.form.true = form.true)
+      # when there is only rank-deficient warning, use the local prediction
+      cond.warnings <- T
+      for (warnings.i in 1:length(tmp$warnings)) {
+        cond.warnings <- cond.warnings & (tmp$warnings[[warnings.i]]$message == "prediction from a rank-deficient fit may be misleading")
+      }
       
-      tmp <- est.cond.eff(df        = tmp$df.fullrank,
-                          method    = adj.mthd,
-                          form.true = tmp$adj.form.true.updated,
-                          type.var  = type.var)
+      if (cond.warnings) {
+        est.cond.eff.1 <- tmp$value$pred.A.1
+        est.cond.eff.0 <- tmp$value$pred.A.0
+      } else {
+        est.cond.eff.1 <- whl.est.cond.eff.1
+        est.cond.eff.0 <- whl.est.cond.eff.0
+      }
       
-      est.cond.eff.1 <- tmp$pred.A.1
-      est.cond.eff.0 <- tmp$pred.A.0
-      var.rb         <- tmp$var.rb
-      w              <- tmp$w
-      
+    } else {
+      est.cond.eff.1 <- tmp$value$pred.A.1
+      est.cond.eff.0 <- tmp$value$pred.A.0
     }
+    
   }
-
+  
   if (continuous){
     
     # Skip the first 10 and last 10 splits, technically not necessary 
@@ -132,9 +179,9 @@ stemp.g <- function(y, wt, x, parms, continuous){
     goodness <- rep(0, n - 1)
     direction <- rep(1, n - 1)
     
-    if (is.null(est.cond.eff.0)){ # model in split
+    if (parms$adj.mod.loc == "split"){ # model in split
       
-      for (i in (num.truc.obs:(n-num.truc.obs))) {
+      for (i in (parms$num.truc.obs:(n-parms$num.truc.obs))) {
         
         # if all observations are treated or not treated in the son nodes,
         # skip this loop
@@ -143,43 +190,80 @@ stemp.g <- function(y, wt, x, parms, continuous){
         }
         
         tmp.l <- gen.fullrank.g(df            = data.node[1:i, ],
-                                adj.form.true = form.true)
+                                adj.form.true = parms$form.true)
         tmp.r <- gen.fullrank.g(df            = data.node[(i+1):n, ],
-                                adj.form.true = form.true)
+                                adj.form.true = parms$form.true)
         
-        tmp.l <- est.cond.eff(df        = tmp.l$df.fullrank,
-                              method    = adj.mthd,
-                              form.true = tmp.l$adj.form.true.updated,
-                              type.var  = type.var)
-        tmp.r <- est.cond.eff(df        = tmp.r$df.fullrank,
-                              method    = adj.mthd,
-                              form.true = tmp.r$adj.form.true.updated,
-                              type.var  = type.var)
+        tmp.l <- withWarnings(est.cond.eff(df        = tmp.l$df.fullrank,
+                                           method    = parms$adj.mthd,
+                                           form.true = tmp.l$adj.form.true.updated,
+                                           type.var  = parms$type.var))
+        tmp.r <- withWarnings(est.cond.eff(df        = tmp.r$df.fullrank,
+                                           method    = parms$adj.mthd,
+                                           form.true = tmp.r$adj.form.true.updated,
+                                           type.var  = parms$type.var))
+        var.rb.l <- tmp.l$value$var.rb
+        var.rb.r <- tmp.r$value$var.rb
+        w.l <- tmp.l$value$w
+        w.r <- tmp.r$value$w
         
-        est.cond.eff.1.l <- tmp.l$pred.A.1
-        est.cond.eff.0.l <- tmp.l$pred.A.0
-        est.cond.eff.1.r <- tmp.r$pred.A.1
-        est.cond.eff.0.r <- tmp.r$pred.A.0
+        # when the outcome model fitting produces warning
+        # use outside model fitting results for conditional means
+        if (!is.null(tmp.l$warnings)) {
+          
+          # when there is only rank-deficient warning, use the local prediction
+          cond.warnings <- T
+          for (warnings.i in 1:length(tmp.l$warnings)) {
+            cond.warnings <- cond.warnings & (tmp.l$warnings[[warnings.i]]$message == "prediction from a rank-deficient fit may be misleading")
+          }
+          
+          if (cond.warnings) {
+            est.cond.eff.1.l <- tmp.l$value$pred.A.1
+            est.cond.eff.0.l <- tmp.l$value$pred.A.0
+          } else {
+            est.cond.eff.0.l <- whl.est.cond.eff.0[1:i]
+            est.cond.eff.1.l <- whl.est.cond.eff.1[1:i]
+          }
+          
+        } else {
+          est.cond.eff.0.l <- tmp.l$value$pred.A.0
+          est.cond.eff.1.l <- tmp.l$value$pred.A.1
+        }
         
-        var.rb.l <- tmp.l$var.rb
-        var.rb.r <- tmp.r$var.rb
-        
-        w.l <- tmp.l$w
-        w.r <- tmp.r$w
+        if (!is.null(tmp.r$warnings)) {
+          
+          # when there is only rank-deficient warning, use the local prediction
+          cond.warnings <- T
+          for (warnings.i in 1:length(tmp.r$warnings)) {
+            cond.warnings <- cond.warnings & (tmp.r$warnings[[warnings.i]]$message == "prediction from a rank-deficient fit may be misleading")
+          }
+          
+          if (cond.warnings) {
+            est.cond.eff.0.r <- tmp.r$value$pred.A.0
+            est.cond.eff.1.r <- tmp.r$value$pred.A.1
+          } else {
+            est.cond.eff.0.r <- whl.est.cond.eff.0[(i+1):n]
+            est.cond.eff.1.r <- whl.est.cond.eff.1[(i+1):n]
+          }
+          
+        } else {
+          est.cond.eff.0.r <- tmp.r$value$pred.A.0
+          est.cond.eff.1.r <- tmp.r$value$pred.A.1
+        }
         
         mu.1l <- mean(est.cond.eff.1.l)
         mu.0l <- mean(est.cond.eff.0.l)
         mu.1r <- mean(est.cond.eff.1.r)
         mu.0r <- mean(est.cond.eff.0.r)
         
-        if (type.var == "cont") {
+        if (parms$type.var == "cont") {
           
           g.b.l.1 <- data.frame(w.l) %>% mutate(A = 1) %>% apply(2, mean)
           g.b.r.1 <- data.frame(w.r) %>% mutate(A = 1) %>% apply(2, mean)
           g.b.l.0 <- data.frame(w.l) %>% mutate(A = 0) %>% apply(2, mean)
           g.b.r.0 <- data.frame(w.r) %>% mutate(A = 0) %>% apply(2, mean)
           
-        } else if (type.var == "bin") {
+        } else if (parms$type.var == "bin") {
           
           w.1l <- w.l %>% mutate(A = 1)
           w.0l <- w.l %>% mutate(A = 0)
@@ -222,7 +306,7 @@ stemp.g <- function(y, wt, x, parms, continuous){
       #     select(colnames(var.rb))
       # }
       
-      for (i in (num.truc.obs:(n-num.truc.obs))) {
+      for (i in (parms$num.truc.obs:(n-parms$num.truc.obs))) {
         
         mu.1l <- mean(est.cond.eff.1[1:i])
         mu.0l <- mean(est.cond.eff.0[1:i])
@@ -231,14 +315,14 @@ stemp.g <- function(y, wt, x, parms, continuous){
         
         # Need to change if the outcome is not continuous
         # involve the derivative of the linear function on the outcome scale
-        if (type.var == "cont") {
+        if (parms$type.var == "cont") {
           
           g.b.l.1 <- data.frame(w[1:i, ]) %>% mutate(A = 1) %>% apply(2, mean)
           g.b.r.1 <- data.frame(w[(i+1):n, ]) %>% mutate(A = 1) %>% apply(2, mean)
           g.b.l.0 <- data.frame(w[1:i, ]) %>% mutate(A = 0) %>% apply(2, mean)
           g.b.r.0 <- data.frame(w[(i+1):n, ]) %>% mutate(A = 0) %>% apply(2, mean)
           
-        } else if (type.var == "bin") {
+        } else if (parms$type.var == "bin") {
           
           w.1 <- w %>% mutate(A = 1)
           w.0 <- w %>% mutate(A = 0)
@@ -276,35 +360,40 @@ stemp.g <- function(y, wt, x, parms, continuous){
       
     }
     
-
+    
   } else{
     
     ux <- sort(unique(x))
     
-    if (is.null(est.cond.eff.0)) {
-      
-      trt.eff.g <- calc.g.trt.eff(data.node, x, ux,
-                                  est.cond.eff.0 = NULL,
-                                  est.cond.eff.1 = NULL,
-                                  adj.mthd       = adj.mthd,
-                                  adj.form.true  = form.true, 
-                                  type.var       = type.var)
-      
-    } else { # when the conditional mean model is fitted within split, 
-             # need to fit conditional mean models within each level
-      
-      trt.eff.g <- calc.g.trt.eff(data.node, x, ux,
-                                  est.cond.eff.0 = est.cond.eff.0,
-                                  est.cond.eff.1 = est.cond.eff.1,
-                                  adj.mthd       = NULL,
-                                  adj.form.true  = NULL,
-                                  type.var       = NULL)
-    }
+    # if (parms$adj.mod.loc == "split") { # when the conditional mean model is fitted within split, 
+    # need to fit conditional mean models within each level
+    trt.eff.g <- calc.g.trt.eff(data.node, x, ux,
+                                est.cond.eff.0     = est.cond.eff.0,
+                                est.cond.eff.1     = est.cond.eff.1,
+                                adj.mod.loc        = parms$adj.mod.loc, 
+                                adj.mthd           = parms$adj.mthd,
+                                adj.form.true      = parms$form.true, 
+                                type.var           = parms$type.var,
+                                whl.est.cond.eff.0 = whl.est.cond.eff.0,
+                                whl.est.cond.eff.1 = whl.est.cond.eff.1)
+    
+    # } else { 
+    #   
+    #   trt.eff.g <- calc.g.trt.eff(data.node, x, ux,
+    #                               est.cond.eff.0     = est.cond.eff.0,
+    #                               est.cond.eff.1     = est.cond.eff.1,
+    #                               adj.mod.loc        = parms$adj.mod.loc, 
+    #                               adj.mthd           = NULL,
+    #                               adj.form.true      = NULL,
+    #                               type.var           = NULL,
+    #                               whl.est.cond.eff.0 = NULL,
+    #                               whl.est.cond.eff.1 = NULL)      # different from IPW, the average will not be weighted to large numbers
+    # }
     
     ord.ux <- order(trt.eff.g)
     goodness  <- rep(0, length(ux) - 1)
     
-    if (is.null(est.cond.eff.0)) {
+    if (parms$adj.mod.loc == "split") {
       
       for (i in 1:(length(ux) - 1)) {
         
@@ -314,41 +403,79 @@ stemp.g <- function(y, wt, x, parms, continuous){
         n.l <- sum(ind.l)
         n.r <- sum(ind.r)
         
-        if ((n.l == 1) | (n.r == 1)) {
-          next
-        }
+        # if ((n.l == 1) | (n.r == 1)) {
+        #   next
+        # }
         
         data.node.l <- data.node[ind.l, ]
         data.node.r <- data.node[ind.r, ]
         
+        # Skip this split if there is only treated/untreated unit in one of the levels
         if ((length(unique(data.node.l$A)) == 1) | (length(unique(data.node.r$A)) == 1)){
           next
         }
         
         tmp.l <- gen.fullrank.g(df            = data.node.l,
-                                adj.form.true = form.true)
+                                adj.form.true = parms$form.true)
         tmp.r <- gen.fullrank.g(df            = data.node.r,
-                                adj.form.true = form.true)
+                                adj.form.true = parms$form.true)
         
-        tmp.l <- est.cond.eff(df        = tmp.l$df.fullrank,
-                              method    = adj.mthd,
-                              form.true = tmp.l$adj.form.true.updated,
-                              type.var  = type.var)
-        tmp.r <- est.cond.eff(df        = tmp.r$df.fullrank,
-                              method    = adj.mthd,
-                              form.true = tmp.r$adj.form.true.updated,
-                              type.var  = type.var)
+        tmp.l <- withWarnings(est.cond.eff(df        = tmp.l$df.fullrank,
+                                           method    = parms$adj.mthd,
+                                           form.true = tmp.l$adj.form.true.updated,
+                                           type.var  = parms$type.var))
+        tmp.r <- withWarnings(est.cond.eff(df        = tmp.r$df.fullrank,
+                                           method    = parms$adj.mthd,
+                                           form.true = tmp.r$adj.form.true.updated,
+                                           type.var  = parms$type.var))
+        var.rb.l <- tmp.l$value$var.rb
+        var.rb.r <- tmp.r$value$var.rb
+        w.l <- tmp.l$value$w
+        w.r <- tmp.r$value$w
         
-        est.cond.eff.1.l <- tmp.l$pred.A.1
-        est.cond.eff.0.l <- tmp.l$pred.A.0
-        est.cond.eff.1.r <- tmp.r$pred.A.1
-        est.cond.eff.0.r <- tmp.r$pred.A.0
+        # when the outcome model fitting produces warning
+        # use outside model fitting results for conditional means
+        if (!is.null(tmp.l$warnings)) {
+          
+          # when there is only rank-deficient warning, use the local prediction
+          cond.warnings <- T
+          for (warnings.i in 1:length(tmp.l$warnings)) {
+            cond.warnings <- cond.warnings & (tmp.l$warnings[[warnings.i]]$message == "prediction from a rank-deficient fit may be misleading")
+          }
+          
+          if (cond.warnings) {
+            est.cond.eff.1.l <- tmp.l$value$pred.A.1
+            est.cond.eff.0.l <- tmp.l$value$pred.A.0
+          } else {
+            est.cond.eff.0.l <- whl.est.cond.eff.0[ind.l]
+            est.cond.eff.1.l <- whl.est.cond.eff.1[ind.l]
+          }
+          
+        } else {
+          est.cond.eff.0.l <- tmp.l$value$pred.A.0
+          est.cond.eff.1.l <- tmp.l$value$pred.A.1
+        }
         
-        var.rb.l <- tmp.l$var.rb
-        var.rb.r <- tmp.r$var.rb
-        
-        w.l <- tmp.l$w
-        w.r <- tmp.r$w
+        if (!is.null(tmp.r$warnings)) {
+          
+          # when there is only rank-deficient warning, use the local prediction
+          cond.warnings <- T
+          for (warnings.i in 1:length(tmp.r$warnings)) {
+            cond.warnings <- cond.warnings & (tmp.r$warnings[[warnings.i]]$message == "prediction from a rank-deficient fit may be misleading")
+          }
+          
+          if (cond.warnings) {
+            est.cond.eff.0.r <- tmp.r$value$pred.A.0
+            est.cond.eff.1.r <- tmp.r$value$pred.A.1
+          } else {
+            est.cond.eff.0.r <- whl.est.cond.eff.0[ind.r]
+            est.cond.eff.1.r <- whl.est.cond.eff.1[ind.r]
+          }
+          
+        } else {
+          est.cond.eff.0.r <- tmp.r$value$pred.A.0
+          est.cond.eff.1.r <- tmp.r$value$pred.A.1
+        }
         
         mu.1l <- mean(est.cond.eff.1.l)
         mu.0l <- mean(est.cond.eff.0.l)
@@ -357,14 +484,14 @@ stemp.g <- function(y, wt, x, parms, continuous){
         
         # Need to change if the outcome is not continuous
         # involve the derivative of the linear function on the outcome scale
-        if (type.var == "cont") {
+        if (parms$type.var == "cont") {
           
           g.b.l.1 <- data.frame(w.l) %>% mutate(A = 1) %>% apply(2, mean)
           g.b.r.1 <- data.frame(w.r) %>% mutate(A = 1) %>% apply(2, mean)
           g.b.l.0 <- data.frame(w.l) %>% mutate(A = 0) %>% apply(2, mean)
           g.b.r.0 <- data.frame(w.r) %>% mutate(A = 0) %>% apply(2, mean)
           
-        } else if (type.var == "bin") {
+        } else if (parms$type.var == "bin") {
           
           w.1l <- w.l %>% mutate(A = 1)
           w.0l <- w.l %>% mutate(A = 0)
@@ -392,14 +519,19 @@ stemp.g <- function(y, wt, x, parms, continuous){
         var.0l <- as.numeric(var.0l)
         var.1r <- as.numeric(var.1r)
         var.0r <- as.numeric(var.0r)
+        var    <- var.1l + var.0l + var.1r + var.0r
         
-        goodness[i] <- (((mu.1l - mu.0l) - (mu.1r - mu.0r))/sqrt(var.1l + var.0l + var.1r + var.0r))^2
+        if (var < 0) {
+          next
+        }
+        
+        goodness[i] <- (((mu.1l - mu.0l) - (mu.1r - mu.0r))/sqrt(var))^2
         
       }
       
     } else { # if (is.null(est.cond.eff.0)) {} else
       
-      for (i in 1:(length(ux) - 1)){
+      for (i in 1:(length(ux) - 1)) {
         
         ind.l <- x %in% ux[ord.ux[1:i]]
         ind.r <- x %in% ux[ord.ux[(i+1):length(ux)]]
@@ -407,10 +539,10 @@ stemp.g <- function(y, wt, x, parms, continuous){
         n.l <- sum(ind.l)
         n.r <- sum(ind.r)
         
-        if ((n.l == 1) | (n.r == 1)) {
-          next
-        }
-
+        # if ((n.l == 1) | (n.r == 1)) {
+        #   next
+        # }
+        
         mu.1l <- mean(est.cond.eff.1[ind.l])
         mu.0l <- mean(est.cond.eff.0[ind.l])
         mu.1r <- mean(est.cond.eff.1[ind.r])
@@ -421,14 +553,14 @@ stemp.g <- function(y, wt, x, parms, continuous){
         w.l <- w[ind.l, ]
         w.r <- w[ind.r, ]
         
-        if (type.var == "cont") {
+        if (parms$type.var == "cont") {
           
           g.b.l.1 <- data.frame(w.l) %>% mutate(A = 1) %>% apply(2, mean)
           g.b.r.1 <- data.frame(w.r) %>% mutate(A = 1) %>% apply(2, mean)
           g.b.l.0 <- data.frame(w.l) %>% mutate(A = 0) %>% apply(2, mean)
           g.b.r.0 <- data.frame(w.r) %>% mutate(A = 0) %>% apply(2, mean)
           
-        } else if (type.var == "bin") {
+        } else if (parms$type.var == "bin") {
           
           w.1l <- w.l %>% mutate(A = 1)
           w.0l <- w.l %>% mutate(A = 0)
@@ -457,13 +589,18 @@ stemp.g <- function(y, wt, x, parms, continuous){
         var.1r <- as.numeric(var.1r)
         var.0l <- as.numeric(var.0l)
         var.0r <- as.numeric(var.0r)
+        var    <- var.1l + var.0l + var.1r + var.0r
         
-        goodness[i] <- (((mu.1l - mu.0l) - (mu.1r - mu.0r))/sqrt(var.1l + var.0l + var.1r + var.0r))^2
+        if (var < 0) {
+          next
+        }
+        
+        goodness[i] <- (((mu.1l - mu.0l) - (mu.1r - mu.0r))/sqrt(var))^2
         
       }
       
     } # if (is.null(est.cond.eff.0)) else
- 
+    
     
     # Direction is the ordered categories
     direction <- ux[ord.ux] 
@@ -486,24 +623,56 @@ etemp.g <- function(y, wt, parms) {
   Y         <- parms$response[sub.ind]
   data.node <- data.frame(Y, A, sub.x)
   
-  est.cond.eff.1 <- parms$est.cond.eff.1[sub.ind]
-  est.cond.eff.0 <- parms$est.cond.eff.0[sub.ind]
-  adj.mthd  <- parms$adj.mthd
-  form.true <- parms$form.true
-  type.var  <- parms$type.var
-
-  if (is.null(est.cond.eff.0)){
+  whl.est.cond.eff.1 <- parms$whl.est.cond.eff.1[sub.ind]
+  whl.est.cond.eff.0 <- parms$whl.est.cond.eff.0[sub.ind]
+  
+  # Weird how this does not work when rss is used.
+  # code still runs without problem
+  wmean <- sum(y * wt) / sum(wt)
+  rss <- sum(wt * (y - wmean)^2)
+  
+  if (parms$adj.mod.loc != "out"){
     
-    tmp <- gen.fullrank.g(df            = data.node,
-                          adj.form.true = form.true)
-    tmp <- est.cond.eff(df        = tmp$df.fullrank,
-                        method    = adj.mthd,
-                        form.true = tmp$adj.form.true.updated,
-                        type.var  = type.var)
+    if (length(unique(data.node$A)) == 1) {
+      
+      est.cond.eff.0 <- whl.est.cond.eff.0
+      est.cond.eff.1 <- whl.est.cond.eff.1
+      
+    } else {
+      tmp <- gen.fullrank.g(df            = data.node,
+                            adj.form.true = parms$form.true)
+      tmp <- withWarnings(est.cond.eff(df        = tmp$df.fullrank,
+                                       method    = parms$adj.mthd,
+                                       form.true = tmp$adj.form.true.updated,
+                                       type.var  = parms$type.var))
+      
+      # when the outcome model fitting produces warning
+      # use outside model fitting results for conditional means
+      if (!is.null(tmp$warnings)) {
+        
+        # when there is only rank-deficient warning, use the local prediction
+        cond.warnings <- T
+        for (warnings.i in 1:length(tmp$warnings)) {
+          cond.warnings <- cond.warnings & (tmp$warnings[[warnings.i]]$message == "prediction from a rank-deficient fit may be misleading")
+        }
+        
+        if (cond.warnings) {
+          est.cond.eff.1 <- tmp$value$pred.A.1
+          est.cond.eff.0 <- tmp$value$pred.A.0
+        } else {
+          est.cond.eff.1 <- whl.est.cond.eff.1
+          est.cond.eff.0 <- whl.est.cond.eff.0
+        }
+        
+      } else {
+        est.cond.eff.1 <- tmp$value$pred.A.1
+        est.cond.eff.0 <- tmp$value$pred.A.0
+      }
+    }
     
-    est.cond.eff.1 = tmp$pred.A.1
-    est.cond.eff.0 = tmp$pred.A.0
-    
+  } else { # "out"
+    est.cond.eff.0 <- whl.est.cond.eff.0
+    est.cond.eff.1 <- whl.est.cond.eff.1
   }
   
   mu.1 <- mean(est.cond.eff.1)
@@ -511,11 +680,6 @@ etemp.g <- function(y, wt, parms) {
   
   # Average treatment effect
   avg.trt.effct <- mu.1 - mu.0
-  
-  # Weird how this does not work when rss is used.
-  # code still runs without problem
-  wmean <- sum(y * wt) / sum(wt)
-  rss <- sum(wt * (y - wmean)^2)
   
   list(label = avg.trt.effct, deviance = rss)
 }

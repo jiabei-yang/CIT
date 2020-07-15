@@ -12,11 +12,11 @@ eval.measures.eff = function(final.tree, test.data, true.trt.eff, noise.var,
   # Calcualte the number/proportion of times the tree splits on each variables 
   # Number of Noise variables
   numb.noise <- sum(final.tree$frame$var %in% noise.var)
-  if (num.splt == 0){
-    prop.noise.all <- 0                      # NEED TO TAKE CARE OF THIS WHEN NO SPLITS SHOULD BE MADE
-  } else {
-    prop.noise.all <- numb.noise / num.splt
-  }
+  # if (num.splt == 0){
+  #   prop.noise.all <- 0                      # NEED TO TAKE CARE OF THIS WHEN NO SPLITS SHOULD BE MADE
+  # } else {
+  #   prop.noise.all <- numb.noise / num.splt
+  # }
   
   # Number of correct trees
   if (is.null(corr.split)){ 
@@ -85,7 +85,7 @@ eval.measures.eff = function(final.tree, test.data, true.trt.eff, noise.var,
       }
       
     } # for loop i
-      
+    
     # make sure there is no noise variable if splits are made correctly
     if (cond){
       for (i in 1:length(noise.var)){
@@ -98,22 +98,22 @@ eval.measures.eff = function(final.tree, test.data, true.trt.eff, noise.var,
   }
   
   # Number/proportion of correct splits made on the first few splits
-  num.corr.splt.frst <- sum(final.tree$frame[as.character(1:(2^(length(corr.split)) - 1)), ]$var %in% corr.split)
-  prop.corr.frst     <- num.corr.splt.frst / (2^(length(corr.split)) - 1)
+  # num.corr.splt.frst <- sum(final.tree$frame[as.character(1:(2^(length(corr.split)) - 1)), ]$var %in% corr.split)
+  # prop.corr.frst     <- num.corr.splt.frst / (2^(length(corr.split)) - 1)
   # Proportion of correct splits over the number of splits made
-  if (num.splt == 0){
-    prop.corr.frst.tree <- 0                      # NEED TO TAKE CARE OF THIS WHEN NO SPLITS SHOULD BE MADE
-  } else {
-    prop.corr.frst.tree <- num.corr.splt.frst / num.splt
-  }
+  # if (num.splt == 0){
+  #   prop.corr.frst.tree <- 0                      # NEED TO TAKE CARE OF THIS WHEN NO SPLITS SHOULD BE MADE
+  # } else {
+  #   prop.corr.frst.tree <- num.corr.splt.frst / num.splt
+  # }
   
   # Number/proportion of splits made on the signal variables
-  num.corr.splt.all <- sum(final.tree$frame$var %in% corr.split)
-  if (num.splt == 0){
-    prop.corr.all <- 0                      # NEED TO TAKE CARE OF THIS WHEN NO SPLITS SHOULD BE MADE
-  } else {
-    prop.corr.all <- num.corr.splt.all / num.splt
-  }
+  # num.corr.splt.all <- sum(final.tree$frame$var %in% corr.split)
+  # if (num.splt == 0){
+  #   prop.corr.all <- 0                      # NEED TO TAKE CARE OF THIS WHEN NO SPLITS SHOULD BE MADE
+  # } else {
+  #   prop.corr.all <- num.corr.splt.all / num.splt
+  # }
   
   # Calcualte the mean square error
   # Calculate the prediction on the test data
@@ -157,7 +157,8 @@ eval.measures.eff = function(final.tree, test.data, true.trt.eff, noise.var,
     pred.tree = rep(final.tree$frame$yval, nrow(test.data))
   } 
   # mse will be NA if there is only 1 observation in the terminal node
-  mse = mean((pred.tree - true.trt.eff)^2, na.rm = T)
+  mse  <- mean((pred.tree - true.trt.eff)^2)
+  # n.na <- sum(is.na(pred.tree))
   
   # PPS
   pps = 1
@@ -181,13 +182,14 @@ eval.measures.eff = function(final.tree, test.data, true.trt.eff, noise.var,
               size.tree           = size.tree,
               num.splt            = num.splt,
               numb.noise          = numb.noise,
-              pps                 = pps,
-              prop.noise.all      = prop.noise.all,
-              num.corr.splt.frst  = num.corr.splt.frst,
-              prop.corr.frst      = prop.corr.frst, 
-              prop.corr.frst.tree = prop.corr.frst.tree,
-              num.corr.splt.all   = num.corr.splt.all,
-              prop.corr.all       = prop.corr.all))
+              pps                 = pps))
+  # n.na                = n.na))
+  # prop.noise.all      = prop.noise.all,
+  # num.corr.splt.frst  = num.corr.splt.frst,
+  # prop.corr.frst      = prop.corr.frst, 
+  # prop.corr.frst.tree = prop.corr.frst.tree,
+  # num.corr.splt.all   = num.corr.splt.all,
+  # prop.corr.all       = prop.corr.all
 }
 
 # Evaluate whether the first split is made correctly if categorical split
@@ -206,3 +208,68 @@ eval.cate.corr.frst.splt <- function(large.tree, corr.split, split.cate) {
   return(cond)
   
 }
+
+# proportion of splits made on correct variables in the first few levels
+eval.lnrSplt.corr.frst.splts <- function(tree, corr.split, num.nodes) {
+  
+  # num.frst.splts record the splits in tree
+  # num.corr.frst.splts records the correct splits in tree
+  num.frst.splts      <- 0
+  
+  lth.corr.split             <- length(corr.split)
+  num.corr.frst.splts        <- rep(0, lth.corr.split)
+  names(num.corr.frst.splts) <- corr.split
+  
+  all.nodes <- rownames(tree$frame)
+  
+  # first node
+  ind.node.1 <- which(all.nodes == 1)
+  splt.var   <- as.character(tree$frame$var[ind.node.1])
+  
+  if (splt.var == "<leaf>") {
+    # if root only, p.corr.frst.splts is 0
+    p.corr.frst.splts <- rep(0, lth.corr.split)
+    names(p.corr.frst.splts) <- corr.split
+    return(p.corr.frst.splts)
+    
+  } else {
+    
+    num.frst.splts <- num.frst.splts + 1
+    for (corr.split.i in 1:lth.corr.split) {
+      if (splt.var == corr.split[corr.split.i]) {
+        num.corr.frst.splts[corr.split.i] <- num.corr.frst.splts[corr.split.i] + 1
+      }
+    }
+    
+  }
+  
+  # later nodes
+  for (num.nodes.i in 2:num.nodes) {
+    
+    if (num.nodes.i %in% all.nodes) {
+      
+      ind.node <- which(all.nodes == num.nodes.i)
+      splt.var <- as.character(tree$frame$var[ind.node])
+      
+      if (splt.var == "<leaf>") {
+        next
+      } else {
+        
+        num.frst.splts <- num.frst.splts + 1
+        for (corr.split.i in 1:lth.corr.split) {
+          if (splt.var == corr.split[corr.split.i]) {
+            num.corr.frst.splts[corr.split.i] <- num.corr.frst.splts[corr.split.i] + 1
+          }
+        }
+      }
+   
+    } #  if (num.nodes.i %in% all.nodes) {
+    
+  }
+  
+  p.corr.frst.splts <- num.corr.frst.splts / num.frst.splts
+  return(p.corr.frst.splts)
+  
+}
+
+

@@ -2,7 +2,7 @@
 ################################################# CV method 2, IPW ###################################################
 ######################################################################################################################
 EstIpw.CvMethod2 = function(data.used, tree.list, type.var = "cont", seed = NULL, n.cv = 5,
-                            propsc.mod.out = T, propsc.mthd = "GLM", propsc.form.true = NULL, min.obs.mod = NULL){
+                            propsc.mod.loc, propsc.mthd = "GLM", propsc.form.true = NULL){
   
   if (!is.null(seed)){
     set.seed(seed)
@@ -34,17 +34,17 @@ EstIpw.CvMethod2 = function(data.used, tree.list, type.var = "cont", seed = NULL
     
     # Calculate prop.sc if prop.sc model fitted outside
     train.data.noy <- train.data[, colnames(train.data) != "Y"]
-    prop.sc.train <- est.prop.sc(df.noy    = train.data.noy, 
-                                 method    = propsc.mthd,
-                                 form.true = propsc.form.true)$prop.sc
-
+    prop.sc.train <- withWarnings(est.prop.sc(df.noy    = train.data.noy, 
+                                              method    = propsc.mthd,
+                                              form.true = propsc.form.true))$value$prop.sc
+    
     # Calculating g(h) for the cross.validated tree
     # Looping through the candidate trees
     for(m in 1:length(tree.list)){
-
+      
       tree.used = tree.list[[m]]
       
-      if (nrow(tree.used$frame) >3) {
+      if (nrow(tree.used$frame) > 3) {
         
         pred.train = predict(tree.used, newdata = train.data)
         pred.tree = predict(tree.used, newdata = test.data)
@@ -54,19 +54,23 @@ EstIpw.CvMethod2 = function(data.used, tree.list, type.var = "cont", seed = NULL
           data.node = train.data[which(pred.train == unique(pred.train)[k]), ]
           test.index = which(pred.tree == unique(pred.train)[k])
           
-          if (!propsc.mod.out) {
+          if (propsc.mod.loc != "out") {
             
-            if (nrow(data.node) >= min.obs.mod){  # When prop.mod.out = T, min.obs.mod = NULL
+            if (length(unique(data.node$A)) > 1) {  # When prop.mod.out = T, min.obs.mod = NULL
               data.node.noy <- data.node[, colnames(data.node) != "Y"]
               
               tmp <- gen.fullrank.ipw(df.noy           = data.node.noy, 
                                       propsc.form.true = propsc.form.true)
               
-              tmp <- est.prop.sc(df.noy    = tmp$df.noy.fullrank,
-                                 method    = propsc.mthd,
-                                 form.true = tmp$propsc.form.true.updated)
+              tmp <- withWarnings(est.prop.sc(df.noy    = tmp$df.noy.fullrank,
+                                              method    = propsc.mthd,
+                                              form.true = tmp$propsc.form.true.updated))
               
-              prop.sc.node <- tmp$prop.sc
+              if ((!is.null(tmp$warnings)) | identical(sort(unique(tmp$value$prop.sc)), c(0.1, 0.9))) {
+                prop.sc.node <- prop.sc.train[which(pred.train == unique(pred.train)[k])]
+              } else {
+                prop.sc.node <- tmp$value$prop.sc
+              }
               
             } else {
               prop.sc.node <- prop.sc.train[which(pred.train == unique(pred.train)[k])]
@@ -83,7 +87,7 @@ EstIpw.CvMethod2 = function(data.used, tree.list, type.var = "cont", seed = NULL
           
         }
         
-      } else if (nrow(tree.used$frame) == 3){
+      } else if (nrow(tree.used$frame) == 3) {
         
         # If there is one or zero splits there is a weird memory error so need to do manually
         pred.tree = rep(NA, nrow(test.data))
@@ -92,22 +96,22 @@ EstIpw.CvMethod2 = function(data.used, tree.list, type.var = "cont", seed = NULL
         col.ind <- which(colnames(train.data) == var.used)
         
         # Need to figure out observations going to the left/right node
-        if ((split.used %% 1) == 0){   
+        if ((split.used %% 1) == 0) {   
           
           # Categorical covariate split
           lvls <- levels(train.data[, col.ind])
           data.node.l <- train.data[train.data[, col.ind] %in% lvls[tree.used$csplit[split.used,] == 1], ]
           data.node.r <- train.data[train.data[, col.ind] %in% lvls[tree.used$csplit[split.used,] == 3], ]
           
-          if (propsc.mod.out){ # When prop.mod.out = T, min.obs.mod = NULL
+          if (propsc.mod.loc == "out"){ # When prop.mod.out = T, min.obs.mod = NULL
             prop.sc.node.l <- prop.sc.train[train.data[, col.ind] %in% lvls[tree.used$csplit[split.used,] == 1]]
             prop.sc.node.r <- prop.sc.train[train.data[, col.ind] %in% lvls[tree.used$csplit[split.used,] == 3]]
           } else { 
-            if (nrow(data.node.l) < min.obs.mod) {
+            if (length(unique(data.node.l$A)) <= 1) {
               prop.sc.node.l <- prop.sc.train[train.data[, col.ind] %in% lvls[tree.used$csplit[split.used,] == 1]]
             }
             
-            if (nrow(data.node.r) < min.obs.mod) {
+            if (length(unique(data.node.r$A)) <= 1) {
               prop.sc.node.r <- prop.sc.train[train.data[, col.ind] %in% lvls[tree.used$csplit[split.used,] == 3]]
             }
           }
@@ -119,15 +123,15 @@ EstIpw.CvMethod2 = function(data.used, tree.list, type.var = "cont", seed = NULL
             data.node.l <- train.data[train.data[,  col.ind] >= split.used, ]
             data.node.r <- train.data[train.data[,  col.ind] < split.used, ]
             
-            if (propsc.mod.out){
+            if (propsc.mod.loc == "out"){
               prop.sc.node.l <- prop.sc.train[train.data[, col.ind] >= split.used]
               prop.sc.node.r <- prop.sc.train[train.data[, col.ind] < split.used]
             } else {
-              if (nrow(data.node.l) < min.obs.mod) {
+              if (length(unique(data.node.l$A)) <= 1) {
                 prop.sc.node.l <- prop.sc.train[train.data[, col.ind] >= split.used]
               }
               
-              if (nrow(data.node.r) < min.obs.mod){
+              if (length(unique(data.node.r$A)) <= 1)  {
                 prop.sc.node.r <- prop.sc.train[train.data[, col.ind] < split.used]
               } 
             }
@@ -137,15 +141,15 @@ EstIpw.CvMethod2 = function(data.used, tree.list, type.var = "cont", seed = NULL
             data.node.l <- train.data[train.data[,  col.ind] < split.used, ]
             data.node.r <- train.data[train.data[,  col.ind] >= split.used, ]
             
-            if (propsc.mod.out){
+            if (propsc.mod.loc == "out"){
               prop.sc.node.l <- prop.sc.train[train.data[, col.ind] < split.used]
               prop.sc.node.r <- prop.sc.train[train.data[, col.ind] >= split.used]
             } else {
-              if (nrow(data.node.l) < min.obs.mod) {
+              if (length(unique(data.node.l$A)) <= 1) {
                 prop.sc.node.l <- prop.sc.train[train.data[, col.ind] < split.used]
               }
               
-              if (nrow(data.node.r) < min.obs.mod) {
+              if (length(unique(data.node.r$A)) <= 1) {
                 prop.sc.node.r <- prop.sc.train[train.data[, col.ind] >= split.used]
               }
             }
@@ -153,33 +157,63 @@ EstIpw.CvMethod2 = function(data.used, tree.list, type.var = "cont", seed = NULL
           }
         }
         
-        if (!propsc.mod.out){
-          if (nrow(data.node.l) >= min.obs.mod) {
+        if (propsc.mod.loc != "out"){
+          
+          # left node
+          if (length(unique(data.node.l$A)) > 1) {
             
             data.node.l.noy <- data.node.l[, colnames(data.node.l) != "Y"]
             tmp <- gen.fullrank.ipw(df.noy           = data.node.l.noy, 
                                     propsc.form.true = propsc.form.true)
             
-            tmp <- est.prop.sc(df.noy    = tmp$df.noy.fullrank,
-                               method    = propsc.mthd,
-                               form.true = tmp$propsc.form.true.updated)
-            prop.sc.node.l <- tmp$prop.sc
+            tmp <- withWarnings(est.prop.sc(df.noy    = tmp$df.noy.fullrank,
+                                            method    = propsc.mthd,
+                                            form.true = tmp$propsc.form.true.updated))
+            
+            if ((!is.null(tmp$warnings)) | identical(sort(unique(tmp$value$prop.sc)), c(0.1, 0.9))) {
+              
+              if ((split.used %% 1) == 0){ 
+                prop.sc.node.l <- prop.sc.train[train.data[, col.ind] %in% lvls[tree.used$csplit[split.used,] == 1]]
+              } else {
+                if (tree.used$splits[2] > 0) {
+                  prop.sc.node.l <- prop.sc.train[train.data[, col.ind] >= split.used]
+                } else {
+                  prop.sc.node.l <- prop.sc.train[train.data[, col.ind] < split.used]
+                }
+              }
+            } else {
+              prop.sc.node.l <- tmp$value$prop.sc
+            }
             
           }
           
-          if (nrow(data.node.r) >= min.obs.mod) {
+          # right node
+          if (length(unique(data.node.r$A)) > 1) {
             
             data.node.r.noy <- data.node.r[, colnames(data.node.r) != "Y"]
             tmp <- gen.fullrank.ipw(df.noy           = data.node.r.noy, 
                                     propsc.form.true = propsc.form.true)
             
-            tmp <- est.prop.sc(df.noy    = tmp$df.noy.fullrank,
-                               method    = propsc.mthd,
-                               form.true = tmp$propsc.form.true.updated)
-            prop.sc.node.r <- tmp$prop.sc
-  
+            tmp <- withWarnings(est.prop.sc(df.noy    = tmp$df.noy.fullrank,
+                                            method    = propsc.mthd,
+                                            form.true = tmp$propsc.form.true.updated))
+            
+            if ((!is.null(tmp$warnings)) | identical(sort(unique(tmp$value$prop.sc)), c(0.1, 0.9))) {
+              if ((split.used %% 1) == 0) { 
+                prop.sc.node.r <- prop.sc.train[train.data[, col.ind] %in% lvls[tree.used$csplit[split.used,] == 3]]
+              } else {
+                if (tree.used$splits[2] > 0) {
+                  prop.sc.node.r <- prop.sc.train[train.data[, col.ind] < split.used]
+                } else {
+                  prop.sc.node.r <- prop.sc.train[train.data[, col.ind] >= split.used]
+                }
+              }
+            } else {
+              prop.sc.node.r <- tmp$value$prop.sc
+            }
+            
           }
-        }
+        } # if (propsc.mod.loc != "out"){
         
         ### Left node
         # Calculating unadjusted estimator  
@@ -222,7 +256,7 @@ EstIpw.CvMethod2 = function(data.used, tree.list, type.var = "cont", seed = NULL
       cv.err[m, l] <- mean((pred.tree - treat.eff.test)^2)
       
     }
-
+    
   }
   
   # Averaging over cross validation sets
@@ -239,7 +273,7 @@ EstIpw.CvMethod2 = function(data.used, tree.list, type.var = "cont", seed = NULL
 ############################################ CV method 2, G estimation ###############################################
 ######################################################################################################################
 EstG.CvMethod2 = function(data.used, tree.list, type.var = "cont", seed = NULL, n.cv = 5,
-                          adj.mod.out = T, adj.mthd = "GLM", adj.form.true = NULL, min.obs.mod = NULL){
+                          adj.mod.loc, adj.mthd = "GLM", adj.form.true = NULL){
   
   if (!is.null(seed)){
     set.seed(seed)
@@ -271,13 +305,13 @@ EstG.CvMethod2 = function(data.used, tree.list, type.var = "cont", seed = NULL, 
     treat.eff.test = pred.A.1$predicted - pred.A.0$predicted
     
     # train
-    tmp <- est.cond.eff(df        = train.data,
-                        method    = adj.mthd,
-                        form.true = adj.form.true,
-                        type.var  = type.var)
+    tmp <- withWarnings(est.cond.eff(df        = train.data,
+                                     method    = adj.mthd,
+                                     form.true = adj.form.true,
+                                     type.var  = type.var))
     
-    est.cond.eff.1.train <- tmp$pred.A.1
-    est.cond.eff.0.train <- tmp$pred.A.0
+    est.cond.eff.1.train <- tmp$value$pred.A.1
+    est.cond.eff.0.train <- tmp$value$pred.A.0
     
     # Calculating g(h) for the cross.validated tree
     # Looping through the candidate trees
@@ -285,30 +319,36 @@ EstG.CvMethod2 = function(data.used, tree.list, type.var = "cont", seed = NULL, 
       
       tree.used = tree.list[[m]]
       
-      if (nrow(tree.used$frame) >3) {
+      if (nrow(tree.used$frame) > 3) {
         
         pred.train <- predict(tree.used, newdata = train.data)
-        pred.tree <- predict(tree.used, newdata = test.data)
+        pred.tree  <- predict(tree.used, newdata = test.data)
         
         for(k in 1:length(unique(pred.train))){
           # Calculating the treatment effect estimator for each node using only the 
           # training data
-          data.node = train.data[which(pred.train == unique(pred.train)[k]), ]
-          test.index = which(pred.tree == unique(pred.train)[k])
+          data.node  <- train.data[which(pred.train == unique(pred.train)[k]), ]
+          test.index <- which(pred.tree == unique(pred.train)[k])
           
-          if (!adj.mod.out){
+          if (adj.mod.loc != "out") {
             
-            if (nrow(data.node) >= min.obs.mod){  # When prop.mod.out = T, min.obs.mod = NULL
+            if (length(unique(data.node$A)) > 1) { 
               
               tmp <- gen.fullrank.g(df            = data.node,
                                     adj.form.true = adj.form.true)
-              tmp <- est.cond.eff(df        = tmp$df.fullrank,
-                                  method    = adj.mthd,
-                                  form.true = tmp$adj.form.true.updated,
-                                  type.var  = type.var)
+              tmp <- withWarnings(est.cond.eff(df        = tmp$df.fullrank,
+                                               method    = adj.mthd,
+                                               form.true = tmp$adj.form.true.updated,
+                                               type.var  = type.var))
               
-              est.cond.eff.1.node <- tmp$pred.A.1
-              est.cond.eff.0.node <- tmp$pred.A.0
+              if (!is.null(tmp$warnings)) {
+                est.cond.eff.1.node <- est.cond.eff.1.train[which(pred.train == unique(pred.train)[k])]
+                est.cond.eff.0.node <- est.cond.eff.0.train[which(pred.train == unique(pred.train)[k])]
+              } else {
+                est.cond.eff.1.node <- tmp$value$pred.A.1
+                est.cond.eff.0.node <- tmp$value$pred.A.0
+              }
+              
             } else {
               est.cond.eff.1.node <- est.cond.eff.1.train[which(pred.train == unique(pred.train)[k])]
               est.cond.eff.0.node <- est.cond.eff.0.train[which(pred.train == unique(pred.train)[k])]
@@ -326,7 +366,7 @@ EstG.CvMethod2 = function(data.used, tree.list, type.var = "cont", seed = NULL, 
           
         }
         
-      } else if (nrow(tree.used$frame) == 3){
+      } else if (nrow(tree.used$frame) == 3) {
         # If there is one or zero splits there is a weird memory error so need to do manually
         pred.tree = rep(NA, nrow(test.data))
         split.used = tree.used$splits[, 4]
@@ -341,7 +381,7 @@ EstG.CvMethod2 = function(data.used, tree.list, type.var = "cont", seed = NULL, 
           data.node.l <- train.data[train.data[, col.ind] %in% lvls[tree.used$csplit[split.used,] == 1], ]
           data.node.r <- train.data[train.data[, col.ind] %in% lvls[tree.used$csplit[split.used,] == 3], ]
           
-          if (adj.mod.out){ # When prop.mod.out = T, min.obs.mod = NULL
+          if (adj.mod.loc == "out"){ # When prop.mod.out = T, min.obs.mod = NULL
             
             est.cond.eff.1.node.l <- est.cond.eff.1.train[train.data[, col.ind] %in% lvls[tree.used$csplit[split.used,] == 1]]
             est.cond.eff.0.node.l <- est.cond.eff.0.train[train.data[, col.ind] %in% lvls[tree.used$csplit[split.used,] == 1]]
@@ -349,12 +389,13 @@ EstG.CvMethod2 = function(data.used, tree.list, type.var = "cont", seed = NULL, 
             est.cond.eff.0.node.r <- est.cond.eff.0.train[train.data[, col.ind] %in% lvls[tree.used$csplit[split.used,] == 3]]
             
           } else { 
-            if (nrow(data.node.l) < min.obs.mod) {
+            
+            if (length(unique(data.node.l$A)) <= 1) {
               est.cond.eff.1.node.l <- est.cond.eff.1.train[train.data[, col.ind] %in% lvls[tree.used$csplit[split.used,] == 1]]
               est.cond.eff.0.node.l <- est.cond.eff.0.train[train.data[, col.ind] %in% lvls[tree.used$csplit[split.used,] == 1]]
             }
             
-            if  (nrow(data.node.r) < min.obs.mod) {
+            if (length(unique(data.node.r$A)) <= 1) {
               est.cond.eff.1.node.r <- est.cond.eff.1.train[train.data[, col.ind] %in% lvls[tree.used$csplit[split.used,] == 3]]
               est.cond.eff.0.node.r <- est.cond.eff.0.train[train.data[, col.ind] %in% lvls[tree.used$csplit[split.used,] == 3]]
             }
@@ -367,19 +408,19 @@ EstG.CvMethod2 = function(data.used, tree.list, type.var = "cont", seed = NULL, 
             data.node.l <- train.data[train.data[,  col.ind] >= split.used, ]
             data.node.r <- train.data[train.data[,  col.ind] < split.used, ]
             
-            if (adj.mod.out){
+            if (adj.mod.loc == "out") {
               est.cond.eff.1.node.l <- est.cond.eff.1.train[train.data[,  col.ind] >= split.used]
               est.cond.eff.0.node.l <- est.cond.eff.0.train[train.data[,  col.ind] >= split.used]
               est.cond.eff.1.node.r <- est.cond.eff.1.train[train.data[,  col.ind] < split.used]
               est.cond.eff.0.node.r <- est.cond.eff.0.train[train.data[,  col.ind] < split.used]
-
+              
             } else {
-              if (nrow(data.node.l) < min.obs.mod) {
+              if (length(unique(data.node.l$A)) <= 1) {
                 est.cond.eff.1.node.l <- est.cond.eff.1.train[train.data[,  col.ind] >= split.used]
                 est.cond.eff.0.node.l <- est.cond.eff.0.train[train.data[,  col.ind] >= split.used]
               }
               
-              if (nrow(data.node.r) < min.obs.mod){
+              if (length(unique(data.node.r$A)) <= 1){
                 est.cond.eff.1.node.r <- est.cond.eff.1.train[train.data[,  col.ind] < split.used]
                 est.cond.eff.0.node.r <- est.cond.eff.0.train[train.data[,  col.ind] < split.used]
               } 
@@ -390,19 +431,19 @@ EstG.CvMethod2 = function(data.used, tree.list, type.var = "cont", seed = NULL, 
             data.node.l <- train.data[train.data[,  col.ind] < split.used, ]
             data.node.r <- train.data[train.data[,  col.ind] >= split.used, ]
             
-            if (adj.mod.out){
+            if (adj.mod.loc == "out") {
               est.cond.eff.1.node.l <- est.cond.eff.1.train[train.data[,  col.ind] < split.used]
               est.cond.eff.0.node.l <- est.cond.eff.0.train[train.data[,  col.ind] < split.used]
               est.cond.eff.1.node.r <- est.cond.eff.1.train[train.data[,  col.ind] >= split.used]
               est.cond.eff.0.node.r <- est.cond.eff.0.train[train.data[,  col.ind] >= split.used]
-
+              
             } else {
-              if (nrow(data.node.l) < min.obs.mod) {
+              if (length(unique(data.node.l$A)) <= 1) {
                 est.cond.eff.1.node.l <- est.cond.eff.1.train[train.data[,  col.ind] < split.used]
                 est.cond.eff.0.node.l <- est.cond.eff.0.train[train.data[,  col.ind] < split.used]
               }
               
-              if (nrow(data.node.r) < min.obs.mod) {
+              if (length(unique(data.node.r$A)) <= 1) {
                 est.cond.eff.1.node.r <- est.cond.eff.1.train[train.data[,  col.ind] >= split.used]
                 est.cond.eff.0.node.r <- est.cond.eff.0.train[train.data[,  col.ind] >= split.used]
               }
@@ -411,33 +452,72 @@ EstG.CvMethod2 = function(data.used, tree.list, type.var = "cont", seed = NULL, 
           }
         }
         
-        if (!adj.mod.out){
-          if (nrow(data.node.l) >= min.obs.mod) {
+        if (adj.mod.loc != "out") {
+          
+          # left node
+          if (length(unique(data.node.l$A)) > 1) {
             
             tmp <- gen.fullrank.g(df            = data.node.l,
                                   adj.form.true = adj.form.true)
-            tmp <- est.cond.eff(df        = tmp$df.fullrank,
-                                method    = adj.mthd,
-                                form.true = tmp$adj.form.true.updated,
-                                type.var  = type.var)
+            tmp <- withWarnings(est.cond.eff(df        = tmp$df.fullrank,
+                                             method    = adj.mthd,
+                                             form.true = tmp$adj.form.true.updated,
+                                             type.var  = type.var))
             
-            est.cond.eff.1.node.l <- tmp$pred.A.1
-            est.cond.eff.0.node.l <- tmp$pred.A.0
+            if (!is.null(tmp$warnings)) {
+              
+              if ((split.used %% 1) == 0) { 
+                est.cond.eff.1.node.l <- est.cond.eff.1.train[train.data[, col.ind] %in% lvls[tree.used$csplit[split.used,] == 1]]
+                est.cond.eff.0.node.l <- est.cond.eff.0.train[train.data[, col.ind] %in% lvls[tree.used$csplit[split.used,] == 1]]
+              } else {
+                if (tree.used$splits[2] > 0) {
+                  est.cond.eff.1.node.l <- est.cond.eff.1.train[train.data[,  col.ind] >= split.used]
+                  est.cond.eff.0.node.l <- est.cond.eff.0.train[train.data[,  col.ind] >= split.used]
+                } else {
+                  est.cond.eff.1.node.l <- est.cond.eff.1.train[train.data[,  col.ind] < split.used]
+                  est.cond.eff.0.node.l <- est.cond.eff.0.train[train.data[,  col.ind] < split.used]
+                }
+              }
+              
+            } else {
+              est.cond.eff.1.node.l <- tmp$value$pred.A.1
+              est.cond.eff.0.node.l <- tmp$value$pred.A.0
+            }
+            
           }
           
-          if (nrow(data.node.r) >= min.obs.mod) {
+          # right node
+          if (length(unique(data.node.r$A)) > 1) {
             
             tmp <- gen.fullrank.g(df            = data.node.r,
                                   adj.form.true = adj.form.true)
-            tmp <- est.cond.eff(df        = tmp$df.fullrank,
-                                method    = adj.mthd,
-                                form.true = tmp$adj.form.true.updated,
-                                type.var  = type.var)
+            tmp <- withWarnings(est.cond.eff(df        = tmp$df.fullrank,
+                                             method    = adj.mthd,
+                                             form.true = tmp$adj.form.true.updated,
+                                             type.var  = type.var))
             
-            est.cond.eff.1.node.r <- tmp$pred.A.1
-            est.cond.eff.0.node.r <- tmp$pred.A.0
+            if (!is.null(tmp$warnings)) {
+              
+              if ((split.used %% 1) == 0) { 
+                est.cond.eff.1.node.r <- est.cond.eff.1.train[train.data[, col.ind] %in% lvls[tree.used$csplit[split.used,] == 3]]
+                est.cond.eff.0.node.r <- est.cond.eff.0.train[train.data[, col.ind] %in% lvls[tree.used$csplit[split.used,] == 3]]
+              } else {
+                if (tree.used$splits[2] > 0) {
+                  est.cond.eff.1.node.r <- est.cond.eff.1.train[train.data[,  col.ind] < split.used]
+                  est.cond.eff.0.node.r <- est.cond.eff.0.train[train.data[,  col.ind] < split.used]
+                } else {
+                  est.cond.eff.1.node.r <- est.cond.eff.1.train[train.data[,  col.ind] >= split.used]
+                  est.cond.eff.0.node.r <- est.cond.eff.0.train[train.data[,  col.ind] >= split.used]
+                }
+              }
+              
+            } else {
+              est.cond.eff.1.node.r <- tmp$value$pred.A.1
+              est.cond.eff.0.node.r <- tmp$value$pred.A.0
+            }
+            
           }
-        }
+        } # if (adj.mod.loc != "out") {
         
         ### Left node
         # Calculating unadjusted estimator  
@@ -450,14 +530,14 @@ EstG.CvMethod2 = function(data.used, tree.list, type.var = "cont", seed = NULL, 
         mu.0r <- mean(est.cond.eff.0.node.r)
         
         col.ind <- which(colnames(test.data) == var.used)
-        if ((split.used %% 1) == 0){   
+        if ((split.used %% 1) == 0) {   
           
           # Test set prediction on categorical covariate split
           lvls <- levels(train.data[, col.ind])
           pred.tree[test.data[, col.ind] %in% lvls[tree.used$csplit[split.used,] == 1]] <- mu.1l - mu.0l
           pred.tree[test.data[, col.ind] %in% lvls[tree.used$csplit[split.used,] == 3]] <- mu.1r - mu.0r
           
-        } else{
+        } else {
           # Test set prediction on continuous covariate split
           # Need to take care of left or right
           if (tree.used$splits[2] > 0) {
@@ -479,15 +559,15 @@ EstG.CvMethod2 = function(data.used, tree.list, type.var = "cont", seed = NULL, 
       
       cv.err[m, l] <- mean((pred.tree - treat.eff.test)^2)
     }
-
+    
   }
-
+  
   # Averaging over cross validation sets
   cv.err.fin = apply(cv.err, 1, mean)
   tree.final = tree.list[[which(cv.err.fin == min(cv.err.fin))[length(which(cv.err.fin == min(cv.err.fin)))]]]
   
   return(list(tree.final, cv.err.fin))
-    
+  
 }
 
 
@@ -495,10 +575,10 @@ EstG.CvMethod2 = function(data.used, tree.list, type.var = "cont", seed = NULL, 
 ########################################### CV method 2, DR estimation ###############################################
 ######################################################################################################################
 EstDr.CvMethod2 = function(data.used, tree.list, type.var = "cont", seed = NULL, n.cv = 5,
-                           propsc.mod.out = T, propsc.mthd = "GLM", propsc.form.true = NULL, min.obs.propsc = NULL,
-                           adj.mod.out = T, adj.mthd = "GLM", adj.form.true = NULL, min.obs.adj = NULL){
+                           propsc.mod.loc, propsc.mthd = "GLM", propsc.form.true = NULL,
+                           adj.mod.loc, adj.mthd = "GLM", adj.form.true = NULL){
   
-  if (!is.null(seed)){
+  if (!is.null(seed)){ 
     set.seed(seed)
   }
   
@@ -530,22 +610,22 @@ EstDr.CvMethod2 = function(data.used, tree.list, type.var = "cont", seed = NULL,
     # Calculate the conditional mean if adj.mod fitted outside
     tmp <- gen.fullrank.g(df            = train.data,
                           adj.form.true = adj.form.true)
-    tmp <- est.cond.eff(df        = tmp$df.fullrank,
-                        method    = adj.mthd,
-                        form.true = tmp$adj.form.true.updated, 
-                        type.var  = type.var)
+    tmp <- withWarnings(est.cond.eff(df        = tmp$df.fullrank,
+                                     method    = adj.mthd,
+                                     form.true = tmp$adj.form.true.updated, 
+                                     type.var  = type.var))
     
-    est.cond.eff.1.train <- tmp$pred.A.1
-    est.cond.eff.0.train <- tmp$pred.A.0
+    est.cond.eff.1.train <- tmp$value$pred.A.1
+    est.cond.eff.0.train <- tmp$value$pred.A.0
     
     # Calculate prop.sc if prop.sc model fitted outside
     train.data.noy <- train.data %>%
       dplyr::select(-Y)
     tmp <- gen.fullrank.ipw(df.noy           = train.data.noy, 
                             propsc.form.true = propsc.form.true)
-    prop.sc.train <- est.prop.sc(df.noy    = tmp$df.noy.fullrank, 
-                                 method    = propsc.mthd,
-                                 form.true = tmp$propsc.form.true.updated)$prop.sc
+    prop.sc.train <- withWarnings(est.prop.sc(df.noy    = tmp$df.noy.fullrank, 
+                                              method    = propsc.mthd,
+                                              form.true = tmp$propsc.form.true.updated))$value$prop.sc
     
     # Calculating g(h) for the cross.validated tree
     # Looping through the candidate trees
@@ -553,7 +633,7 @@ EstDr.CvMethod2 = function(data.used, tree.list, type.var = "cont", seed = NULL,
       
       tree.used = tree.list[[m]]
       
-      if (nrow(tree.used$frame) >3) {
+      if (nrow(tree.used$frame) > 3) {
         pred.train <- predict(tree.used, newdata = train.data)
         pred.tree <- predict(tree.used, newdata = test.data)
         
@@ -564,20 +644,25 @@ EstDr.CvMethod2 = function(data.used, tree.list, type.var = "cont", seed = NULL,
           test.index = which(pred.tree == unique(pred.train)[k])
           
           # Fit adj.mod if not fit outside
-          if (!adj.mod.out){
+          if (adj.mod.loc != "out") {
             
-            if (nrow(data.node) >= min.obs.adj){  # When prop.mod.out = T, min.obs.mod = NULL
+            if (length(unique(data.node$A)) > 1) {  # When prop.mod.out = T, min.obs.mod = NULL
               
               tmp <- gen.fullrank.g(df            = data.node,
                                     adj.form.true = adj.form.true)
-              tmp <- est.cond.eff(df        = tmp$df.fullrank,
-                                  method    = adj.mthd,
-                                  form.true = tmp$adj.form.true.updated,
-                                  type.var  = type.var)
+              tmp <- withWarnings(est.cond.eff(df        = tmp$df.fullrank,
+                                               method    = adj.mthd,
+                                               form.true = tmp$adj.form.true.updated,
+                                               type.var  = type.var))
               
-              est.cond.eff.1.node <- tmp$pred.A.1
-              est.cond.eff.0.node <- tmp$pred.A.0
-    
+              if (!is.null(tmp$warnings)) {
+                est.cond.eff.1.node <- est.cond.eff.1.train[which(pred.train == unique(pred.train)[k])]
+                est.cond.eff.0.node <- est.cond.eff.0.train[which(pred.train == unique(pred.train)[k])]
+              } else {
+                est.cond.eff.1.node <- tmp$value$pred.A.1
+                est.cond.eff.0.node <- tmp$value$pred.A.0
+              }
+              
             } else { # If the number of observations fewer than min.obs.adj, use the result fitted outside to replace
               est.cond.eff.1.node <- est.cond.eff.1.train[which(pred.train == unique(pred.train)[k])]
               est.cond.eff.0.node <- est.cond.eff.0.train[which(pred.train == unique(pred.train)[k])]
@@ -589,16 +674,23 @@ EstDr.CvMethod2 = function(data.used, tree.list, type.var = "cont", seed = NULL,
           }
           
           # Fit propsc.mod if not fit outside
-          if (!propsc.mod.out){
+          if (propsc.mod.loc != "out") {
             
-            if (nrow(data.node) >= min.obs.propsc){  # When prop.mod.out = T, min.obs.mod = NULL
+            if (length(unique(data.node$A)) > 1) {  # When prop.mod.out = T, min.obs.mod = NULL
               data.node.noy <- data.node %>%
                 dplyr::select(-Y)
               tmp <- gen.fullrank.ipw(df.noy           = data.node.noy, 
                                       propsc.form.true = propsc.form.true)
-              prop.sc.node <- est.prop.sc(df.noy    = tmp$df.noy.fullrank, 
-                                          method    = propsc.mthd,
-                                          form.true = tmp$propsc.form.true.updated)$prop.sc
+              tmp <- withWarnings(est.prop.sc(df.noy    = tmp$df.noy.fullrank, 
+                                              method    = propsc.mthd,
+                                              form.true = tmp$propsc.form.true.updated))
+              
+              if ((!is.null(tmp$warnings)) | identical(sort(unique(tmp$value$prop.sc)), c(0.1, 0.9))) {
+                prop.sc.node <- prop.sc.train[which(pred.train == unique(pred.train)[k])]
+              } else {
+                prop.sc.node <- tmp$value$prop.sc
+              }
+              
             } else {
               prop.sc.node <- prop.sc.train[which(pred.train == unique(pred.train)[k])]
             }
@@ -606,10 +698,10 @@ EstDr.CvMethod2 = function(data.used, tree.list, type.var = "cont", seed = NULL,
           } else { # model prop.sc.out / the number of observations in the node small
             prop.sc.node <- prop.sc.train[which(pred.train == unique(pred.train)[k])]
           }
-  
+          
           mu.1 <- mean(data.node$A * (data.node$Y - est.cond.eff.1.node) / prop.sc.node + est.cond.eff.1.node)
           mu.0 <- mean((1 - data.node$A) * (data.node$Y - est.cond.eff.0.node)/ (1 - prop.sc.node) + est.cond.eff.0.node)
-
+          
           pred.tree[test.index] <- mu.1 - mu.0
           
         }
@@ -622,14 +714,14 @@ EstDr.CvMethod2 = function(data.used, tree.list, type.var = "cont", seed = NULL,
         col.ind <- which(colnames(train.data) == var.used)
         
         # Need to figure out observations going to the left/right node
-        if (class(data.used[, as.character(var.used)]) == "factor"){   
+        if (class(data.used[, as.character(var.used)]) == "factor") {   
           
           # Categorical covariate split
           lvls <- levels(train.data[, col.ind])
           data.node.l <- train.data[train.data[, col.ind] %in% lvls[tree.used$csplit[split.used,] == 1], ]
           data.node.r <- train.data[train.data[, col.ind] %in% lvls[tree.used$csplit[split.used,] == 3], ]
           
-          if (adj.mod.out){ # When prop.mod.out = T, min.obs.mod = NULL
+          if (adj.mod.loc == "out"){ # When prop.mod.out = T, min.obs.mod = NULL
             
             est.cond.eff.1.node.l <- est.cond.eff.1.train[train.data[, col.ind] %in% lvls[tree.used$csplit[split.used,] == 1]]
             est.cond.eff.0.node.l <- est.cond.eff.0.train[train.data[, col.ind] %in% lvls[tree.used$csplit[split.used,] == 1]]
@@ -637,26 +729,26 @@ EstDr.CvMethod2 = function(data.used, tree.list, type.var = "cont", seed = NULL,
             est.cond.eff.0.node.r <- est.cond.eff.0.train[train.data[, col.ind] %in% lvls[tree.used$csplit[split.used,] == 3]]
             
           } else { 
-            if (nrow(data.node.l) < min.obs.adj) {
+            if (length(unique(data.node.l$A)) <= 1) {
               est.cond.eff.1.node.l <- est.cond.eff.1.train[train.data[, col.ind] %in% lvls[tree.used$csplit[split.used,] == 1]]
               est.cond.eff.0.node.l <- est.cond.eff.0.train[train.data[, col.ind] %in% lvls[tree.used$csplit[split.used,] == 1]]
             }
             
-            if  (nrow(data.node.r) < min.obs.adj) {
+            if  (length(unique(data.node.r$A)) <= 1) {
               est.cond.eff.1.node.r <- est.cond.eff.1.train[train.data[, col.ind] %in% lvls[tree.used$csplit[split.used,] == 3]]
               est.cond.eff.0.node.r <- est.cond.eff.0.train[train.data[, col.ind] %in% lvls[tree.used$csplit[split.used,] == 3]]
             }
           }
           
-          if (propsc.mod.out){ # When prop.mod.out = T, min.obs.mod = NULL
+          if (propsc.mod.loc == "out"){ # When prop.mod.out = T, min.obs.mod = NULL
             prop.sc.node.l <- prop.sc.train[train.data[, col.ind] %in% lvls[tree.used$csplit[split.used,] == 1]]
             prop.sc.node.r <- prop.sc.train[train.data[, col.ind] %in% lvls[tree.used$csplit[split.used,] == 3]]
           } else { 
-            if (nrow(data.node.l) < min.obs.propsc) {
+            if (length(unique(data.node.l$A)) <= 1) {
               prop.sc.node.l <- prop.sc.train[train.data[, col.ind] %in% lvls[tree.used$csplit[split.used,] == 1]]
             }
             
-            if  (nrow(data.node.r) < min.obs.propsc) {
+            if  (length(unique(data.node.r$A)) <= 1) {
               prop.sc.node.r <- prop.sc.train[train.data[, col.ind] %in% lvls[tree.used$csplit[split.used,] == 3]]
             }
           }
@@ -667,33 +759,33 @@ EstDr.CvMethod2 = function(data.used, tree.list, type.var = "cont", seed = NULL,
             data.node.l <- train.data[train.data[,  col.ind] >= split.used, ]
             data.node.r <- train.data[train.data[,  col.ind] < split.used, ]
             
-            if (adj.mod.out){
+            if (adj.mod.loc == "out"){
               est.cond.eff.1.node.l <- est.cond.eff.1.train[train.data[,  col.ind] >= split.used]
               est.cond.eff.0.node.l <- est.cond.eff.0.train[train.data[,  col.ind] >= split.used]
               est.cond.eff.1.node.r <- est.cond.eff.1.train[train.data[,  col.ind] < split.used]
               est.cond.eff.0.node.r <- est.cond.eff.0.train[train.data[,  col.ind] < split.used]
               
             } else {
-              if (nrow(data.node.l) < min.obs.adj) {
+              if (length(unique(data.node.l$A)) <= 1) {
                 est.cond.eff.1.node.l <- est.cond.eff.1.train[train.data[,  col.ind] >= split.used]
                 est.cond.eff.0.node.l <- est.cond.eff.0.train[train.data[,  col.ind] >= split.used]
               }
               
-              if (nrow(data.node.r) < min.obs.adj){
+              if (length(unique(data.node.r$A)) <= 1){
                 est.cond.eff.1.node.r <- est.cond.eff.1.train[train.data[,  col.ind] < split.used]
                 est.cond.eff.0.node.r <- est.cond.eff.0.train[train.data[,  col.ind] < split.used]
               } 
             }
             
-            if (propsc.mod.out){
+            if (propsc.mod.loc == "out"){
               prop.sc.node.l <- prop.sc.train[train.data[, col.ind] >= split.used]
               prop.sc.node.r <- prop.sc.train[train.data[, col.ind] < split.used]
             } else {
-              if (nrow(data.node.l) < min.obs.propsc) {
+              if (length(unique(data.node.l$A)) <= 1) {
                 prop.sc.node.l <- prop.sc.train[train.data[, col.ind] >= split.used]
               }
               
-              if (nrow(data.node.r) < min.obs.propsc){
+              if (length(unique(data.node.r$A)) <= 1){
                 prop.sc.node.r <- prop.sc.train[train.data[, col.ind] < split.used]
               } 
             }
@@ -703,33 +795,33 @@ EstDr.CvMethod2 = function(data.used, tree.list, type.var = "cont", seed = NULL,
             data.node.l <- train.data[train.data[,  col.ind] < split.used, ]
             data.node.r <- train.data[train.data[,  col.ind] >= split.used, ]
             
-            if (adj.mod.out){
+            if (adj.mod.loc == "out"){
               est.cond.eff.1.node.l <- est.cond.eff.1.train[train.data[,  col.ind] < split.used]
               est.cond.eff.0.node.l <- est.cond.eff.0.train[train.data[,  col.ind] < split.used]
               est.cond.eff.1.node.r <- est.cond.eff.1.train[train.data[,  col.ind] >= split.used]
               est.cond.eff.0.node.r <- est.cond.eff.0.train[train.data[,  col.ind] >= split.used]
               
             } else {
-              if (nrow(data.node.l) < min.obs.adj) {
+              if (length(unique(data.node.l$A)) <= 1) {
                 est.cond.eff.1.node.l <- est.cond.eff.1.train[train.data[,  col.ind] < split.used]
                 est.cond.eff.0.node.l <- est.cond.eff.0.train[train.data[,  col.ind] < split.used]
               }
               
-              if (nrow(data.node.r) < min.obs.adj) {
+              if (length(unique(data.node.r$A)) <= 1) {
                 est.cond.eff.1.node.r <- est.cond.eff.1.train[train.data[,  col.ind] >= split.used]
                 est.cond.eff.0.node.r <- est.cond.eff.0.train[train.data[,  col.ind] >= split.used]
               }
             }
             
-            if (propsc.mod.out){
+            if (propsc.mod.loc == "out") {
               prop.sc.node.l <- prop.sc.train[train.data[, col.ind] < split.used]
               prop.sc.node.r <- prop.sc.train[train.data[, col.ind] >= split.used]
             } else {
-              if (nrow(data.node.l) < min.obs.propsc) {
+              if (length(unique(data.node.l$A)) <= 1) {
                 prop.sc.node.l <- prop.sc.train[train.data[, col.ind] < split.used]
               }
               
-              if (nrow(data.node.r) < min.obs.propsc) {
+              if (length(unique(data.node.r$A)) <= 1) {
                 prop.sc.node.r <- prop.sc.train[train.data[, col.ind] >= split.used]
               }
             }
@@ -737,59 +829,126 @@ EstDr.CvMethod2 = function(data.used, tree.list, type.var = "cont", seed = NULL,
           }  # else [if (tree.used$splits[2] > 0)]
         } # else [if ((split.used %% 1) == 0)]
         
-        if (!adj.mod.out){
-          if (nrow(data.node.l) >= min.obs.adj) {
+        if (adj.mod.loc != "out") {
+          if (length(unique(data.node.l$A)) > 1) {
             tmp <- gen.fullrank.g(df            = data.node.l,
                                   adj.form.true = adj.form.true)
-            tmp <- est.cond.eff(df        = tmp$df.fullrank,
-                                method    = adj.mthd,
-                                form.true = tmp$adj.form.true.updated,
-                                type.var  = type.var)
+            tmp <- withWarnings(est.cond.eff(df        = tmp$df.fullrank,
+                                             method    = adj.mthd,
+                                             form.true = tmp$adj.form.true.updated,
+                                             type.var  = type.var))
             
-            est.cond.eff.1.node.l <- tmp$pred.A.1
-            est.cond.eff.0.node.l <- tmp$pred.A.0
+            if (!is.null(tmp$warnings)) {
+              
+              if (class(data.used[, as.character(var.used)]) == "factor") { 
+                est.cond.eff.1.node.l <- est.cond.eff.1.train[train.data[, col.ind] %in% lvls[tree.used$csplit[split.used,] == 1]]
+                est.cond.eff.0.node.l <- est.cond.eff.0.train[train.data[, col.ind] %in% lvls[tree.used$csplit[split.used,] == 1]]
+              } else {
+                if (tree.used$splits[2] > 0) {
+                  est.cond.eff.1.node.l <- est.cond.eff.1.train[train.data[,  col.ind] >= split.used]
+                  est.cond.eff.0.node.l <- est.cond.eff.0.train[train.data[,  col.ind] >= split.used]
+                } else {
+                  est.cond.eff.1.node.l <- est.cond.eff.1.train[train.data[,  col.ind] < split.used]
+                  est.cond.eff.0.node.l <- est.cond.eff.0.train[train.data[,  col.ind] < split.used]
+                }
+              }
+              
+            } else {
+              est.cond.eff.1.node.l <- tmp$value$pred.A.1
+              est.cond.eff.0.node.l <- tmp$value$pred.A.0
+            }
+            
           }
           
-          if (nrow(data.node.r) >= min.obs.adj) {
+          if (length(unique(data.node.r$A)) > 1) {
             tmp <- gen.fullrank.g(df            = data.node.r,
                                   adj.form.true = adj.form.true)
-            tmp <- est.cond.eff(df        = tmp$df.fullrank,
-                                method    = adj.mthd,
-                                form.true = tmp$adj.form.true.updated,
-                                type.var  = type.var)
+            tmp <- withWarnings(est.cond.eff(df        = tmp$df.fullrank,
+                                             method    = adj.mthd,
+                                             form.true = tmp$adj.form.true.updated,
+                                             type.var  = type.var))
             
-            est.cond.eff.1.node.r <- tmp$pred.A.1
-            est.cond.eff.0.node.r <- tmp$pred.A.0
-          }
-        }
+            if (!is.null(tmp$warnings)) {
+              
+              if (class(data.used[, as.character(var.used)]) == "factor") { 
+                est.cond.eff.1.node.r <- est.cond.eff.1.train[train.data[, col.ind] %in% lvls[tree.used$csplit[split.used,] == 3]]
+                est.cond.eff.0.node.r <- est.cond.eff.0.train[train.data[, col.ind] %in% lvls[tree.used$csplit[split.used,] == 3]]
+              } else {
+                if (tree.used$splits[2] > 0) {
+                  est.cond.eff.1.node.r <- est.cond.eff.1.train[train.data[,  col.ind] < split.used]
+                  est.cond.eff.0.node.r <- est.cond.eff.0.train[train.data[,  col.ind] < split.used]
+                } else {
+                  est.cond.eff.1.node.r <- est.cond.eff.1.train[train.data[,  col.ind] >= split.used]
+                  est.cond.eff.0.node.r <- est.cond.eff.0.train[train.data[,  col.ind] >= split.used]
+                }
+              }
+              
+            } else {
+              est.cond.eff.1.node.r <- tmp$value$pred.A.1
+              est.cond.eff.0.node.r <- tmp$value$pred.A.0
+            }
+          } # if (length(unique(data.node.l$A)) > 1) {
+        } # if (adj.mod.loc != "out") {
         
-        if (!propsc.mod.out){
-          if (nrow(data.node.l) >= min.obs.propsc) {
+        if (propsc.mod.loc != "out") {
+          
+          if (length(unique(data.node.l$A)) > 1) {
             data.node.l.noy <- data.node.l %>%
               dplyr::select(-Y)
             tmp <- gen.fullrank.ipw(df.noy           = data.node.l.noy, 
                                     propsc.form.true = propsc.form.true)
-            prop.sc.node.l <- est.prop.sc(df.noy    = tmp$df.noy.fullrank, 
-                                          method    = propsc.mthd,
-                                          form.true = tmp$propsc.form.true.updated)$prop.sc
-          }
+            tmp <- withWarnings(est.prop.sc(df.noy    = tmp$df.noy.fullrank, 
+                                            method    = propsc.mthd,
+                                            form.true = tmp$propsc.form.true.updated))
+            
+            if ((!is.null(tmp$warnings)) | identical(sort(unique(tmp$value$prop.sc)), c(0.1, 0.9))) {
+              
+              if (class(data.used[, as.character(var.used)]) == "factor") { 
+                prop.sc.node.l <- prop.sc.train[train.data[, col.ind] %in% lvls[tree.used$csplit[split.used,] == 1]]
+              } else {
+                if (tree.used$splits[2] > 0) {
+                  prop.sc.node.l <- prop.sc.train[train.data[, col.ind] >= split.used]
+                } else {
+                  prop.sc.node.l <- prop.sc.train[train.data[, col.ind] < split.used]
+                }
+              }
+            } else {
+              prop.sc.node.l <- tmp$value$prop.sc
+            }
+            
+          } # if (length(unique(data.node.l$A)) > 1) {
           
-          if (nrow(data.node.r) >= min.obs.propsc) {
+          if (length(unique(data.node.r$A)) > 1) {
             data.node.r.noy <- data.node.r %>%
               dplyr::select(-Y)
             tmp <- gen.fullrank.ipw(df.noy           = data.node.r.noy, 
                                     propsc.form.true = propsc.form.true)
-            prop.sc.node.r <- est.prop.sc(df.noy    = tmp$df.noy.fullrank, 
-                                          method    = propsc.mthd,
-                                          form.true = tmp$propsc.form.true.updated)$prop.sc
-          }
-        }
+            tmp <- withWarnings(est.prop.sc(df.noy    = tmp$df.noy.fullrank, 
+                                            method    = propsc.mthd,
+                                            form.true = tmp$propsc.form.true.updated))
+            
+            if ((!is.null(tmp$warnings)) | identical(sort(unique(tmp$value$prop.sc)), c(0.1, 0.9))) {
+              if (class(data.used[, as.character(var.used)]) == "factor") { 
+                prop.sc.node.r <- prop.sc.train[train.data[, col.ind] %in% lvls[tree.used$csplit[split.used,] == 3]]
+              } else {
+                if (tree.used$splits[2] > 0) {
+                  prop.sc.node.r <- prop.sc.train[train.data[, col.ind] < split.used]
+                } else {
+                  prop.sc.node.r <- prop.sc.train[train.data[, col.ind] >= split.used]
+                }
+              }
+            } else {
+              prop.sc.node.r <- tmp$value$prop.sc
+            }
+            
+          } # if (length(unique(data.node.r$A)) > 1)
+        } # if (propsc.mod.loc != "out") {
         
         ### Left node
         # Calculating unadjusted estimator  
         mu.1l <- mean(data.node.l$A * (data.node.l$Y - est.cond.eff.1.node.l) / prop.sc.node.l + est.cond.eff.1.node.l)
         mu.0l <- mean((1 - data.node.l$A) * (data.node.l$Y - est.cond.eff.0.node.l)/ (1 - prop.sc.node.l) + est.cond.eff.0.node.l)
-
+        
         ### Right node
         # Calculating unadjusted estimator  
         mu.1r <- mean(data.node.r$A * (data.node.r$Y - est.cond.eff.1.node.r) / prop.sc.node.r + est.cond.eff.1.node.r)
@@ -817,10 +976,10 @@ EstDr.CvMethod2 = function(data.used, tree.list, type.var = "cont", seed = NULL,
         }
         
       } else { # else if (nrow(tree.used$frame) == 3) {
-
+        
         mu.1 <- mean(train.data$A * (train.data$Y - est.cond.eff.1.train) / prop.sc.train + est.cond.eff.1.train)
         mu.0 <- mean((1 - train.data$A) * (train.data$Y - est.cond.eff.0.train)/ (1 - prop.sc.train) + est.cond.eff.0.train)
-
+        
         pred.tree <- mu.1 - mu.0
       }
       

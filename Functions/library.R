@@ -7,4 +7,5 @@ if (!require(mgcv)) {install.packages("mgcv"); library(mgcv)}
 if (!require(devtools)) {install.packages("devtools"); library(devtools)}
 # if (!require(causalTree)) {install_github("susanathey/causalTree"); library(causalTree)}
 if (!require(optparse)) {install.packages("optparse"); library(optparse)}
+if (!require(doParallel)) {install.packages("doParallel"); library(doParallel)}
 

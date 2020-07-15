@@ -1,50 +1,80 @@
-library(dplyr)
 library(ggplot2)
+library(dplyr)
+library(tidyr)
+library(xtable)
 
-load("../Data/main.RData")
+load("../Data/main/CausalTreeOriginal.RData")
+performance.orig.ct <- performance.ct
+dim(performance.orig.ct)
 
-##################################################################################################
-########################################### Figure ###############################################
-##################################################################################################
-res.ct <- res %>% 
-  filter(est.mthd %in% c("CT", "CT.default")) 
+load("../Data/main/CausalTreeBest.RData")
+performance.best.ct <- performance.ct
+dim(performance.best.ct)
 
-res.ct <- res.ct %>% 
-  mutate(Algorithm = ifelse(est.mthd == "CT", "Best CT", NA)) %>%
-  mutate(Algorithm = ifelse(est.mthd == "CT.default", "Original CT", Algorithm)) %>%
-  mutate(Method = ifelse(Method == "Misspecified.Honest", "Mis Cov Honest", Method)) %>%
-  mutate(Method = ifelse(Method == "Noisy.Honest", "Mis Func Honest", Method)) %>%
-  mutate(Method = ifelse(Method == "True.Honest", "True Honest", Method)) %>%
-  mutate(Method = ifelse(Method == "Misspecified.NoHonest", "Mis Cov Regular", Method)) %>%
-  mutate(Method = ifelse(Method == "Noisy.NoHonest", "Mis Func Regular", Method)) %>%
-  mutate(Method = ifelse(Method == "True.NoHonest", "True Regular", Method)) 
+performance.orig.ct <- rbind(performance.orig.ct[, 8 * 0 + 1:8],
+                             performance.orig.ct[, 8 * 1 + 1:8],
+                             performance.orig.ct[, 8 * 2 + 1:8],
+                             performance.orig.ct[, 8 * 3 + 1:8],
+                             performance.orig.ct[, 8 * 4 + 1:8],
+                             performance.orig.ct[, 8 * 5 + 1:8],
+                             cbind(performance.orig.ct[, 8 * 6 + 7 * 0 + 1:7], NA),
+                             cbind(performance.orig.ct[, 8 * 6 + 7 * 1 + 1:7], NA),
+                             cbind(performance.orig.ct[, 8 * 6 + 7 * 2 + 1:7], NA),
+                             cbind(performance.orig.ct[, 8 * 6 + 7 * 3 + 1:7], NA),
+                             cbind(performance.orig.ct[, 8 * 6 + 7 * 4 + 1:7], NA),
+                             cbind(performance.orig.ct[, 8 * 6 + 7 * 5 + 1:7], NA))
+performance.best.ct <- rbind(performance.best.ct[, 8 * 0 + 1:8],
+                             performance.best.ct[, 8 * 1 + 1:8],
+                             performance.best.ct[, 8 * 2 + 1:8],
+                             performance.best.ct[, 8 * 3 + 1:8],
+                             performance.best.ct[, 8 * 4 + 1:8],
+                             performance.best.ct[, 8 * 5 + 1:8],
+                             cbind(performance.best.ct[, 8 * 6 + 7 * 0 + 1:7], NA),
+                             cbind(performance.best.ct[, 8 * 6 + 7 * 1 + 1:7], NA),
+                             cbind(performance.best.ct[, 8 * 6 + 7 * 2 + 1:7], NA),
+                             cbind(performance.best.ct[, 8 * 6 + 7 * 3 + 1:7], NA),
+                             cbind(performance.best.ct[, 8 * 6 + 7 * 4 + 1:7], NA),
+                             cbind(performance.best.ct[, 8 * 6 + 7 * 5 + 1:7], NA))
+performance.ct <- rbind(performance.orig.ct, performance.best.ct)
+rm(performance.orig.ct, performance.best.ct)
+dim(performance.ct)
+colnames(performance.ct)
+colnames(performance.ct) <- gsub("hetero.propsc.true.nohonest.", "", colnames(performance.ct))
 
-res.ct <- res.ct %>%
-  mutate(Method    = factor(Method)) %>%
-  mutate(Algorithm = factor(Algorithm))
-res.ct <- res.ct %>%
-  mutate(Method    = factor(Method, levels(res.ct$Method)[c(2, 4, 6, 1, 3, 5)])) %>%
-  mutate(setting   = factor(setting, levels(res.ct$setting)[c(2, 1)])) %>%
-  mutate(Algorithm = factor(Algorithm, levels(res.ct$Algorithm)[c(2, 1)]))
+# scenarios
+algorithm <- c("Original CT", "Best CT")
+setting   <- c("Heterogeneous", "Homogeneous")
+Method    <- c("True", "Mis Func", "Unmeasured Cov")
+i_honest  <- c("Regular", "Honest")
 
-res.ct <- res.ct %>%
-  mutate(color.method = ifelse(grepl("Regular", Method), "Regular", "Honest"))
-res.ct <- res.ct %>%
-  mutate(Method = sub(" Regular", "", Method)) %>%
-  mutate(Method = sub(" Honest", "", Method))
+scnrs <- expand.grid(i_honest, Method, setting, algorithm)
+colnames(scnrs) <- c("i_honest", "Method", "setting", "algorithm")
 
+performance.ct <- cbind(scnrs[rep(1:nrow(scnrs), each = 10^4), ],
+                        performance.ct)
+colnames(performance.ct)
 
+# relevel factors
+performance.ct <- performance.ct %>%
+  mutate(i_honest  = factor(i_honest, c("Regular", "Honest")),
+         Method    = factor(Method, c("Unmeasured Cov", "Mis Func", "True")),
+         setting   = factor(setting, c("Homogeneous", "Heterogeneous")),
+         algorithm = factor(algorithm, c("Original CT", "Best CT")))
+
+# plot
 cbbPalette <- c("#999999", "#E69F00", "#56B4E9", "#009E73", "#0072B2", "#D55E00", "#CC79A7", "#F0E442")
 
-ggplot(res.ct, aes(Method, mse, group = paste(Method, color.method, sep = "."))) +
-  geom_boxplot(outlier.size = 0.3, size = 0.3, aes(color = color.method)) + 
+# Figure S2
+ggplot(performance.ct, aes(Method, mse)) +
+  geom_boxplot(outlier.size = 0.3, size = 0.3, aes(color = i_honest)) + 
   ylab("MSE") + 
-  facet_grid(setting ~ Algorithm, scales = "free_x", space = "free_x") +
+  facet_grid(setting ~ algorithm, scales = "free_x", space = "free_x") +
   theme_bw() +
   # theme(axis.text.x = element_text(angle = 90, hjust = 1)) +
-  scale_y_log10(limits = c(2e-9, 2e4)) +
+  scale_y_log10(limits = c(6.22e-13, 1.86e6)) +
+  # scale_y_log10() +
   scale_colour_manual(values = cbbPalette, 
-                      name = "Algorithms", 
-                      breaks = c("Honest", "Regular"),
-                      labels = c("Honest", "Regular")) + 
+                      name = "Algorithms") + 
   theme(legend.position = "bottom")
+
+

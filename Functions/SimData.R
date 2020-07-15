@@ -36,8 +36,8 @@ makeData.cont.eff.cont <- function(N, n.test, p = 6, coeff.prop.sc){
               corr.split   = c("X4"),              # corr.split needs to be ordered by treatment effect difference
               where.split  = list(c(1)),     # where to make splits (rownumbers in rpart$frame) corresponds to corr.split
               dir.split    = list(c(NULL))))     # direction of making splits, except for the splits into terminal nodes,
-                                                                 # other splits' direction will matter; also corresponds to corr.split
-
+  # other splits' direction will matter; also corresponds to corr.split
+  
   # return(list(data.used    = data.used, 
   #             test.data    = test.data,
   #             true.trt.eff = true.trt.eff,
@@ -45,7 +45,7 @@ makeData.cont.eff.cont <- function(N, n.test, p = 6, coeff.prop.sc){
   #             corr.split   = c("X4", "X1"),              # corr.split needs to be ordered by treatment effect difference
   #             where.split  = list(c(1, 2), c(1, 3)),     # where to make splits (rownumbers in rpart$frame) corresponds to corr.split
   #             dir.split    = list(c(NULL))))     # direction of making splits, except for the splits into terminal nodes,
-
+  
   
 }
 
@@ -89,6 +89,57 @@ makeData.cont.noeff.cont <- function(N, n.test, p = 6, coeff.prop.sc){
   
 }
 
+
+
+# Continuous outcome, categorical covariates
+# Heterogeneous
+makeData.cont.eff.cate = function(N, n.test, p = 6, n.cate = 3:8, coeff.prop.sc) {
+  
+  # Covariates
+  # 6 columns of categorical X
+  X <- NULL
+  
+  for (i in 1:p) {
+    tmp.cate <- base::sample(LETTERS[1:n.cate[i]], size = N, replace = T)
+    X <- cbind(X, tmp.cate)
+    
+    colnames(X)[i] <- paste("X", i, sep = "")
+  }
+  X <- data.frame(X)
+  
+  # Treatment
+  prop.sc <- 1 / (1 + exp(- coeff.prop.sc * (X[, 2] %in% LETTERS[c(2, 4)]) + coeff.prop.sc * (X[, 3] %in% LETTERS[2:4]) - coeff.prop.sc * (X[, 4] %in% LETTERS[2:3])))
+  A <- rbinom(N, 1, prop.sc)
+  
+  # Outcome
+  Y <- 2 + 2 * A + 2 * (X[, 1] %in% LETTERS[1:2]) + (X[, 2] %in% LETTERS[3:4]) + 3 * A * (X[, 4] %in% LETTERS[c(2, 4)]) + rnorm(N) 
+  # A * (X[, p.cont + 1] %in% LETTERS[c(2, 4)]) * (X[, p.cont + 2] %in% LETTERS[1:2]) + rnorm(N)
+  data.used <- data.frame(A, Y, X)
+  
+  X.test <- NULL
+  for (i in 1:p) {
+    tmp.cate <- base::sample(LETTERS[1:n.cate[i]], size = n.test, replace = T)
+    X.test <- cbind(X.test, tmp.cate)
+    
+    colnames(X.test)[i] <- paste("X", i, sep = "")
+  }
+  test.data <- data.frame(X.test)
+  
+  # True treatment effect
+  true.trt.eff <- 2 + 3 * (test.data[, 4] %in% LETTERS[c(2, 4)]) 
+  return(list(data.used    = data.used, 
+              test.data    = test.data,
+              true.trt.eff = true.trt.eff,
+              noise.var    = c("X1", "X2", "X3", "X5", "X6"),
+              corr.split   = c("X4"),              # corr.split needs to be ordered by treatment effect difference
+              where.split  = list(c(1)),           # where to make splits (rownumbers in rpart$frame), each vector's length is the same as corr.split, each vector gives one possibility of row number of making splits in rpart$frame
+              dir.split    = list(c(NULL)),        # direction of making splits, except for the splits into terminal nodes, other splits' direction will matter; also corresponds to corr.split
+              split.cate   = list(c(2, 4))))       # Categories that should be in the same node, each vector corresponds to one element in corr.split
+  
+}
+
+
+
 # Continuous outcome, mixed covariates
 # Heterogeneous
 makeData.cont.eff.mixed = function(N, n.test, p.cont = 3, p.cate = 3, n.cate = 4:6, coeff.prop.sc){
@@ -115,7 +166,7 @@ makeData.cont.eff.mixed = function(N, n.test, p.cont = 3, p.cate = 3, n.cate = 4
   
   # Outcome
   Y <- 2 + 2 * A + 2 * (X[, 1] < 0) + exp(X[, 2]) + 3 * A * (X[, p.cont + 1] %in% LETTERS[c(2, 4)]) + rnorm(N) 
-    # A * (X[, p.cont + 1] %in% LETTERS[c(2, 4)]) * (X[, p.cont + 2] %in% LETTERS[1:2]) + rnorm(N)
+  # A * (X[, p.cont + 1] %in% LETTERS[c(2, 4)]) * (X[, p.cont + 2] %in% LETTERS[1:2]) + rnorm(N)
   data.used <- data.frame(A, Y, X)
   
   X.test <- mvrnorm(n.test, mu = rep(0, p.cont), Sigma = sgm)
@@ -136,8 +187,9 @@ makeData.cont.eff.mixed = function(N, n.test, p.cont = 3, p.cate = 3, n.cate = 4
               noise.var    = c("X1", "X2", "X3", "X5", "X6"),
               corr.split   = c("X4"),              # corr.split needs to be ordered by treatment effect difference
               where.split  = list(c(1)),     # where to make splits (rownumbers in rpart$frame) corresponds to corr.split
-              dir.split    = list(c(NULL))))             # direction of making splits, except for the splits into terminal nodes,
-                                                         # other splits' direction will matter; also corresponds to corr.split
+              dir.split    = list(c(NULL)),
+              split.cate   = list(c(2, 4))))             # direction of making splits, except for the splits into terminal nodes,
+  # other splits' direction will matter; also corresponds to corr.split
   
 }
 
@@ -248,7 +300,7 @@ makeData.bin.eff.mixed = function(N, n.test, p.cont = 3, p.cate = 3, n.cate = 4:
               where.split  = list(c(1)),           # where to make splits (rownumbers in rpart$frame), each vector's length is the same as corr.split, each vector gives one possibility of row number of making splits in rpart$frame
               dir.split    = list(c(NULL)),        # direction of making splits, except for the splits into terminal nodes, other splits' direction will matter; also corresponds to corr.split
               split.cate   = list(c(2, 4))))       # Categories that should be in the same node, each vector corresponds to one element in corr.split            
-                                                         
+  
   
 }
 
@@ -312,3 +364,211 @@ makeData.bin.noeff.mixed = function(N, n.test, p.cont = 3, p.cate = 3, n.cate = 
   
   
 }
+
+
+
+
+# Continuous outcome, continuous covariates
+# Heterogeneous, smaller signal, ar-1 correlation structure
+makeData.cont.eff.cont.smSig.ar1 <- function(N, n.test, p = 6, coeff.prop.sc, max.corr, signal){
+  
+  # Covariates
+  # p columns of continuous X
+  times <- 1:p
+  H <- abs(outer(times, times, "-"))
+  sgm <- max.corr^H
+  X <- mvrnorm(N, mu = rep(0, p), Sigma = sgm)
+  X <- data.frame(X)
+  
+  # Treatment
+  # prop.sc <- 1 / (1 + exp(- 0.6 * X[, 1] + 0.6 * X[, 2] - 0.6 * X[, 3]))
+  prop.sc <- 1 / (1 + exp(- coeff.prop.sc * X[, 1] + coeff.prop.sc * X[, 2] - coeff.prop.sc * X[, 3]))
+  A <- rbinom(N, 1, prop.sc)
+  
+  # Outcome
+  Y <- 2 + 0.5 * A + 2 * (X[, 1] < 0) + exp(X[, 2]) +  signal * A * (X[, 4] > 0) + (X[, 5])^3 + rnorm(N)
+  # Y <- 2 + 2 * A + A * (X[, 1] < 0.5) * (X[, 4] > 0) + exp(X[, 2]) + 3 * A * (X[, 4] > 0) + (X[, 5])^3 + rnorm(N)
+  data.used <- data.frame(A, Y, X)
+  colnames(data.used)[3:dim(data.used)[2]] <- paste("X", 1:p, sep = "")
+  
+  X.test <- mvrnorm(n.test, mu = rep(0, p), Sigma = sgm)
+  X.test <- data.frame(X.test)
+  test.data <- X.test
+  colnames(test.data)[1:dim(test.data)[2]] <- paste("X", 1:p, sep = "")
+  
+  # True treatment effect
+  true.trt.eff <- 0.5 + signal * (test.data[, 4] > 0)
+  # true.trt.eff <- 2 + (X[, 1] < 0.5) * (X[, 4] > 0) + 3 * (test.data[, 4] > 0)
+  return(list(data.used    = data.used, 
+              test.data    = test.data,
+              true.trt.eff = true.trt.eff,
+              noise.var    = c("X1", "X2", "X3", "X5", "X6"),
+              corr.split   = c("X4"),              # corr.split needs to be ordered by treatment effect difference
+              where.split  = list(c(1)),     # where to make splits (rownumbers in rpart$frame) corresponds to corr.split
+              dir.split    = list(c(NULL))))     # direction of making splits, except for the splits into terminal nodes,
+  # other splits' direction will matter; also corresponds to corr.split
+  
+  # return(list(data.used    = data.used, 
+  #             test.data    = test.data,
+  #             true.trt.eff = true.trt.eff,
+  #             noise.var    = c("X2", "X3", "X5", "X6"),
+  #             corr.split   = c("X4", "X1"),              # corr.split needs to be ordered by treatment effect difference
+  #             where.split  = list(c(1, 2), c(1, 3)),     # where to make splits (rownumbers in rpart$frame) corresponds to corr.split
+  #             dir.split    = list(c(NULL))))     # direction of making splits, except for the splits into terminal nodes,
+  
+}
+
+
+
+# Continuous outcome, continuous covariates
+# Heterogeneous, smaller signal, ar-1 correlation structure
+makeData.cont.noeff.cont.smSig.ar1 <- function(N, n.test, p = 6, coeff.prop.sc, max.corr, signal){
+  
+  # Covariates
+  # p columns of continuous X
+  times <- 1:p
+  H <- abs(outer(times, times, "-"))
+  sgm <- max.corr^H
+  X <- mvrnorm(N, mu = rep(0, p), Sigma = sgm)
+  X <- data.frame(X)
+  
+  # Treatment
+  # prop.sc <- 1 / (1 + exp(- 0.6 * X[, 1] + 0.6 * X[, 2] - 0.6 * X[, 3]))
+  prop.sc <- 1 / (1 + exp(- coeff.prop.sc * X[, 1] + coeff.prop.sc * X[, 2] - coeff.prop.sc * X[, 3]))
+  A <- rbinom(N, 1, prop.sc)
+  
+  # Outcome
+  Y <- 2 + 0.5 * A + 2 * (X[, 1] < 0) + exp(X[, 2]) +  signal * (X[, 4] > 0) + (X[, 5])^3 + rnorm(N)
+  # Y <- 2 + 2 * A + A * (X[, 1] < 0.5) * (X[, 4] > 0) + exp(X[, 2]) + 3 * A * (X[, 4] > 0) + (X[, 5])^3 + rnorm(N)
+  data.used <- data.frame(A, Y, X)
+  colnames(data.used)[3:dim(data.used)[2]] <- paste("X", 1:p, sep = "")
+  
+  X.test <- mvrnorm(n.test, mu = rep(0, p), Sigma = sgm)
+  X.test <- data.frame(X.test)
+  test.data <- X.test
+  colnames(test.data)[1:dim(test.data)[2]] <- paste("X", 1:p, sep = "")
+  
+  # True treatment effect
+  true.trt.eff <- rep(0.5, n.test)
+  # true.trt.eff <- 2 + (X[, 1] < 0.5) * (X[, 4] > 0) + 3 * (test.data[, 4] > 0)
+  return(list(data.used    = data.used, 
+              test.data    = test.data,
+              true.trt.eff = true.trt.eff,
+              noise.var    = c("X1", "X2", "X3", "X4", "X5", "X6"),
+              corr.split   = NULL,              # corr.split needs to be ordered by treatment effect difference
+              where.split  = NULL,     # where to make splits (rownumbers in rpart$frame) corresponds to corr.split
+              dir.split    = NULL))     # direction of making splits, except for the splits into terminal nodes,
+  # other splits' direction will matter; also corresponds to corr.split
+  
+  # return(list(data.used    = data.used, 
+  #             test.data    = test.data,
+  #             true.trt.eff = true.trt.eff,
+  #             noise.var    = c("X2", "X3", "X5", "X6"),
+  #             corr.split   = c("X4", "X1"),              # corr.split needs to be ordered by treatment effect difference
+  #             where.split  = list(c(1, 2), c(1, 3)),     # where to make splits (rownumbers in rpart$frame) corresponds to corr.split
+  #             dir.split    = list(c(NULL))))     # direction of making splits, except for the splits into terminal nodes,
+  
+}
+
+# Continuous outcome, continuous covariates, no tree
+# Heterogeneous
+makeData.cont.eff.cont.lnrSplt <- function(N, n.test, p = 6, coeff.prop.sc, signal) {
+  
+  # Covariates
+  # p columns of continuous X
+  sgm <- diag(p)
+  sgm <- sgm + 0.3
+  sgm <- sgm - diag(p) * 0.3
+  X <- mvrnorm(N, mu = rep(0, p), Sigma = sgm)
+  X <- data.frame(X)
+  
+  # Treatment
+  # prop.sc <- 1 / (1 + exp(- 0.6 * X[, 1] + 0.6 * X[, 2] - 0.6 * X[, 3]))
+  prop.sc <- 1 / (1 + exp(- coeff.prop.sc * X[, 1] + coeff.prop.sc * X[, 2] - coeff.prop.sc * X[, 3]))
+  A <- rbinom(N, 1, prop.sc)
+  
+  # Outcome
+  Y <- 1 + 1 * A + 1 * (X[, 1] < 0) + exp(X[, 2]) - (X[, 5])^3 + signal * A * X[, 4] - signal * A * (X[, 6])^2 + rnorm(N)
+  # Y <- 2 + 2 * A + A * (X[, 1] < 0.5) * (X[, 4] > 0) + exp(X[, 2]) + 3 * A * (X[, 4] > 0) + (X[, 5])^3 + rnorm(N)
+  data.used <- data.frame(A, Y, X)
+  colnames(data.used)[3:dim(data.used)[2]] <- paste("X", 1:p, sep = "")
+  
+  X.test <- mvrnorm(n.test, mu = rep(0, p), Sigma = sgm)
+  X.test <- data.frame(X.test)
+  test.data <- X.test
+  colnames(test.data)[1:dim(test.data)[2]] <- paste("X", 1:p, sep = "")
+  
+  # True treatment effect
+  true.trt.eff <- 1 + signal * test.data[, 4] + signal * (test.data[, 6])^2
+  # true.trt.eff <- 2 + (X[, 1] < 0.5) * (X[, 4] > 0) + 3 * (test.data[, 4] > 0)
+  return(list(data.used    = data.used, 
+              test.data    = test.data,
+              true.trt.eff = true.trt.eff,
+              noise.var    = c("X1", "X2", "X3", "X5"),
+              corr.split   = c("X4"),              # corr.split needs to be ordered by treatment effect difference
+              where.split  = list(c(1)),     # where to make splits (rownumbers in rpart$frame) corresponds to corr.split
+              dir.split    = list(c(NULL))))     # direction of making splits, except for the splits into terminal nodes,
+  # other splits' direction will matter; also corresponds to corr.split
+  
+  # return(list(data.used    = data.used, 
+  #             test.data    = test.data,
+  #             true.trt.eff = true.trt.eff,
+  #             noise.var    = c("X2", "X3", "X5", "X6"),
+  #             corr.split   = c("X4", "X1"),              # corr.split needs to be ordered by treatment effect difference
+  #             where.split  = list(c(1, 2), c(1, 3)),     # where to make splits (rownumbers in rpart$frame) corresponds to corr.split
+  #             dir.split    = list(c(NULL))))     # direction of making splits, except for the splits into terminal nodes,
+  
+  
+}
+
+# Continuous outcome, continuous covariates, no tree
+# Heterogeneous
+makeData.cont.noeff.cont.lnrSplt <- function(N, n.test, p = 6, coeff.prop.sc, signal) {
+  
+  # Covariates
+  # p columns of continuous X
+  sgm <- diag(p)
+  sgm <- sgm + 0.3
+  sgm <- sgm - diag(p) * 0.3
+  X <- mvrnorm(N, mu = rep(0, p), Sigma = sgm)
+  X <- data.frame(X)
+  
+  # Treatment
+  # prop.sc <- 1 / (1 + exp(- 0.6 * X[, 1] + 0.6 * X[, 2] - 0.6 * X[, 3]))
+  prop.sc <- 1 / (1 + exp(- coeff.prop.sc * X[, 1] + coeff.prop.sc * X[, 2] - coeff.prop.sc * X[, 3]))
+  A <- rbinom(N, 1, prop.sc)
+  
+  # Outcome
+  Y <- 1 + 1 * A + 1 * (X[, 1] < 0) + exp(X[, 2]) - (X[, 5])^3 + signal * X[, 4] - signal * (X[, 6])^2 + rnorm(N)
+  # Y <- 2 + 2 * A + A * (X[, 1] < 0.5) * (X[, 4] > 0) + exp(X[, 2]) + 3 * A * (X[, 4] > 0) + (X[, 5])^3 + rnorm(N)
+  data.used <- data.frame(A, Y, X)
+  colnames(data.used)[3:dim(data.used)[2]] <- paste("X", 1:p, sep = "")
+  
+  X.test <- mvrnorm(n.test, mu = rep(0, p), Sigma = sgm)
+  X.test <- data.frame(X.test)
+  test.data <- X.test
+  colnames(test.data)[1:dim(test.data)[2]] <- paste("X", 1:p, sep = "")
+  
+  # True treatment effect
+  true.trt.eff <- rep(1, n.test) 
+  # true.trt.eff <- 2 + (X[, 1] < 0.5) * (X[, 4] > 0) + 3 * (test.data[, 4] > 0)
+  return(list(data.used    = data.used, 
+              test.data    = test.data,
+              true.trt.eff = true.trt.eff,
+              noise.var    = c("X1", "X2", "X3", "X4", "X5", "X6"),
+              corr.split   = NULL,              # corr.split needs to be ordered by treatment effect difference
+              where.split  = NULL,     # where to make splits (rownumbers in rpart$frame) corresponds to corr.split
+              dir.split    = NULL))     # direction of making splits, except for the splits into terminal nodes,
+  # other splits' direction will matter; also corresponds to corr.split
+  
+  # return(list(data.used    = data.used, 
+  #             test.data    = test.data,
+  #             true.trt.eff = true.trt.eff,
+  #             noise.var    = c("X2", "X3", "X5", "X6"),
+  #             corr.split   = c("X4", "X1"),              # corr.split needs to be ordered by treatment effect difference
+  #             where.split  = list(c(1, 2), c(1, 3)),     # where to make splits (rownumbers in rpart$frame) corresponds to corr.split
+  #             dir.split    = list(c(NULL))))     # direction of making splits, except for the splits into terminal nodes,
+  
+  
+}
+
