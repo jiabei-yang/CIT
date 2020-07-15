@@ -16,12 +16,16 @@ Code for paper "Causal Interaction Trees: Finding Subgroups with Heterogeneous T
     + `RhcOptDr.R`: run Doubly Robust Causal Interaction Tree algorithms.
     + `RhcRootBi.R`: calculate the bootstrap interval for the root node.
     + `RhcFrstSpltBi.R`: calculate the bootstrap intervals for the two subgroups given the first split in the large tree built by DR-CIT.
-  * `Run*.R`: shell scripts to run associated R scripts on `slurm`.
+  * `Run*.sh`: shell scripts to run associated R scripts on `slurm`.
   
-* `Functions/`: functions to implement the Inverse Probability Weighting, G-computation, and Doubly Robust Interaction trees.
-  + `CvMethod1.R`: functions for the main final tree selection with different estimators. 
-  + `CvMethod2.R`: functions for the alternative final tree selection with different estimators. 
-  + `EstCondEff.R`: `est.cond.eff()` fits the outcome model. `est.prop.sc()` fits the propensity score model.
+* `Functions/`: functions to implement the Inverse Probability Weighting, G-formula, and Doubly Robust Causal Interaction trees.
+  + `CvMethod1.R`: functions for the final tree selection method described in the main manuscript. 
+  + `CvMethod1MltLamda.R`: functions for the final tree selection method described in the main manuscript where final trees will be produced for multiple user-specified penalization parameters.
+  + `CvMethod2.R`: functions for the alternative final tree selection method described in Web Appendix B. 
+  + `EstCondEff.R`: 
+    + `est.cond.eff()` fits the outcome model. 
+    + `est.prop.sc()` fits the propensity score model.
+    + `withWarnings()` saves the warning messages from functions.
   + `EstDrTempFunc.R`: splitting and evaluation functions for the doubly robust estimator.
   + `EstGTempFunc.R`: splitting and evaluation functions for the G-computation estimator.
   + `EstIpwTempFunc.R`: splitting and evaluation functions for the inverse probability weighting estimator.
