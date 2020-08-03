@@ -86,8 +86,8 @@ colnames(scnrs.ct) <- c("Method", "setting", "algorithm")
 algorithm <- c("Causal Interaction Tree (CIT)")
 setting   <- c("Heterogeneous", "Homogeneous")
 Method   <- c("True IPW-CIT", "Mis Func IPW-CIT", "Unmeasured Cov IPW-CIT", 
-              "True G-CIT", "Mis Func G-CIT", "Unmeasured Cov G-CIT", 
-              "Both True DR-CIT", "True Out Mis Func Prop DR-CIT", "True Prop Mis Func Out DR-CIT", "Both Mis Func DR-CIT", "Both Unmeasured Cov DR-CIT")
+              "True g-CIT", "Mis Func g-CIT", "Unmeasured Cov g-CIT", 
+              "Both True DR-CIT", "True Out Mis Func Treat DR-CIT", "True Treat Mis Func Out DR-CIT", "Both Mis Func DR-CIT", "Both Unmeasured Cov DR-CIT")
 
 scnrs.cit <- expand.grid(Method, setting, algorithm)
 scnrs.cit <- scnrs.cit[c(1:3, 12:14, 4:6, 15:17, 7:11, 18:22), ]
@@ -101,8 +101,8 @@ performance.all <- cbind(scnrs[rep(1:nrow(scnrs), each = 10^4), ],
 performance.all <- performance.all %>%
   mutate(Method    = factor(Method, c("Unmeasured Cov", "Mis Func", "True", 
                                       "Unmeasured Cov IPW-CIT", "Mis Func IPW-CIT", "True IPW-CIT", 
-                                      "Unmeasured Cov G-CIT", "Mis Func G-CIT", "True G-CIT", 
-                                      "Both Unmeasured Cov DR-CIT", "Both Mis Func DR-CIT", "True Prop Mis Func Out DR-CIT", "True Out Mis Func Prop DR-CIT", "Both True DR-CIT")),
+                                      "Unmeasured Cov g-CIT", "Mis Func g-CIT", "True g-CIT", 
+                                      "Both Unmeasured Cov DR-CIT", "Both Mis Func DR-CIT", "True Treat Mis Func Out DR-CIT", "True Out Mis Func Treat DR-CIT", "Both True DR-CIT")),
          setting   = factor(setting, c("Homogeneous", "Heterogeneous")),
          algorithm = factor(algorithm, c("Original CT", "Best CT", "Causal Interaction Tree (CIT)")))
 
@@ -141,7 +141,7 @@ summ.latex <- summ.latex %>%
   mutate(Method = sub("Heterogeneous ", "", Method))
 summ.latex <- summ.latex %>%
   mutate(Estimator = ifelse(grepl("IPW", Method), "IPW-CIT", NA)) %>%
-  mutate(Estimator = ifelse(grepl("G", Method), "G-CIT", Estimator)) %>%
+  mutate(Estimator = ifelse(grepl("g", Method), "g-CIT", Estimator)) %>%
   mutate(Estimator = ifelse(grepl("DR", Method), "DR-CIT", Estimator)) %>%
   mutate(Estimator = ifelse(grepl("Original CT", Method), "Original CT", Estimator)) %>%
   mutate(Estimator = ifelse(grepl("Best CT", Method), "Best CT", Estimator))
@@ -151,7 +151,7 @@ summ.latex <- summ.latex %>%
   mutate(Method = sub("Best CT", "", Method))
 summ.latex <- summ.latex %>%
   mutate(Method = sub(" IPW-CIT", "", Method)) %>%
-  mutate(Method = sub(" G-CIT", "", Method)) %>%
+  mutate(Method = sub(" g-CIT", "", Method)) %>%
   mutate(Method = sub(" DR-CIT", "", Method)) 
   # mutate(Method = sub(" CT", "", Method))
 summ.latex <- summ.latex[, c(6, 1:5)]
@@ -185,7 +185,7 @@ summ.latex <- summ.latex %>%
   mutate(Method = sub("Heterogeneous ", "", Method))
 summ.latex <- summ.latex %>%
   mutate(Estimator = ifelse(grepl("IPW", Method), "IPW-CIT", NA)) %>%
-  mutate(Estimator = ifelse(grepl("G", Method), "G-CIT", Estimator)) %>%
+  mutate(Estimator = ifelse(grepl("g", Method), "g-CIT", Estimator)) %>%
   mutate(Estimator = ifelse(grepl("DR", Method), "DR-CIT", Estimator)) %>%
   mutate(Estimator = ifelse(grepl("Original CT", Method), "Original CT", Estimator)) %>%
   mutate(Estimator = ifelse(grepl("Best CT", Method), "Best CT", Estimator))
@@ -195,7 +195,7 @@ summ.latex <- summ.latex %>%
   mutate(Method = sub("Best CT", "", Method))
 summ.latex <- summ.latex %>%
   mutate(Method = sub(" IPW-CIT", "", Method)) %>%
-  mutate(Method = sub(" G-CIT", "", Method)) %>%
+  mutate(Method = sub(" g-CIT", "", Method)) %>%
   mutate(Method = sub(" DR-CIT", "", Method)) 
 # mutate(Method = sub(" CT", "", Method))
 summ.latex <- summ.latex[, c(3, 1:2)]
@@ -206,7 +206,7 @@ print(xtable(summ.latex), include.rownames=FALSE)
 # Rhc Root Bootstrap Interval
 load("../Data/main/RhcRootBi.RData")
 trt.eff.ci <- data.frame(apply(trt.eff, 2, quantile, probs = c(0.025, 0.5, 0.975)))
-colnames(trt.eff.ci) <- c("IPW", "G", "DR")
+colnames(trt.eff.ci) <- c("IPW", "g", "DR")
 round(trt.eff.ci, 3)
 
 # Rhc First Split Bootstrap Interval

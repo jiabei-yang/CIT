@@ -14,7 +14,7 @@ rm(rhc.boot.ipw.result, rhc.boot.dr.result, rhc.boot.g.result)
 
 # combine results from CITs
 rhc.boot.cit <- rbind(cbind("IPW-CIT", rhc.boot.ipw),
-                      cbind("G-CIT", rhc.boot.g),
+                      cbind("g-CIT", rhc.boot.g),
                       cbind("DR-CIT", rhc.boot.dr))
 rhc.boot.cit <- data.frame(rhc.boot.cit)
 colnames(rhc.boot.cit)[1:4] <- c("estimator", "t1", "t2", "size_tree")
@@ -22,7 +22,7 @@ colnames(rhc.boot.cit)[1:4] <- c("estimator", "t1", "t2", "size_tree")
 rhc.boot.cit <- rhc.boot.cit %>%
   mutate(size_tree = as.numeric(levels(size_tree))[size_tree])
 rhc.boot.cit <- rhc.boot.cit %>%
-  mutate(estimator = factor(estimator, c("IPW-CIT", "G-CIT", "DR-CIT")))
+  mutate(estimator = factor(estimator, c("IPW-CIT", "g-CIT", "DR-CIT")))
 
 rhc.boot.cit <- rhc.boot.cit %>%
   mutate(size_tree_fig = ifelse(size_tree == 1, "1", NA)) %>%
@@ -52,12 +52,12 @@ ggplot(rhc.boot.cit, aes(x = size_tree_fig, fill = estimator)) +
   xlab("Size of trees") +
   # scale_colour_manual(values = cbbPalette, 
   #                     name = "Algorithms", 
-  #                     breaks = c("IPW-CIT", "G-CIT", "DR-CIT"),
-  #                     labels = c("IPW-CIT", "G-CIT", "DR-CIT")) + 
+  #                     breaks = c("IPW-CIT", "g-CIT", "DR-CIT"),
+  #                     labels = c("IPW-CIT", "g-CIT", "DR-CIT")) + 
   scale_fill_manual(values = cbbPalette, 
                     name = "Algorithms", 
-                    breaks = c("IPW-CIT", "G-CIT", "DR-CIT"),
-                    labels = c("IPW-CIT", "G-CIT", "DR-CIT")) +
+                    breaks = c("IPW-CIT", "g-CIT", "DR-CIT"),
+                    labels = c("IPW-CIT", "g-CIT", "DR-CIT")) +
   theme(legend.position = "bottom") +
   annotate(geom = "text", x = c(0.7, 1, 1.3), y = c(828, 997, 879) + 25, label = c(828, 997, 879)) 
 
@@ -66,7 +66,7 @@ tapply(rhc.boot.cit$size_tree_fig, rhc.boot.cit$estimator, table)
 # bootstrap confidence interval
 load("../Data/AppendixD3/RhcSpltRootCi.RData")
 ci.ipw <- ci.cit[c(rhc.boot.cit$size_tree[rhc.boot.cit$estimator == "IPW-CIT"] == 1), 1:3]
-ci.g   <- ci.cit[c(rhc.boot.cit$size_tree[rhc.boot.cit$estimator == "G-CIT"] == 1), 4:6]
+ci.g   <- ci.cit[c(rhc.boot.cit$size_tree[rhc.boot.cit$estimator == "g-CIT"] == 1), 4:6]
 ci.dr  <- ci.cit[c(rhc.boot.cit$size_tree[rhc.boot.cit$estimator == "DR-CIT"] == 1), 7:9]
 
 apply(ci.ipw, 2, median)
@@ -75,7 +75,7 @@ apply(ci.dr, 2, median)
 apply(ci.dr, 2, mean)
 
 ci.cit <- rbind(cbind("IPW-CIT", ci.ipw),
-                cbind("G-CIT", ci.g),
+                cbind("g-CIT", ci.g),
                 cbind("DR-CIT", ci.dr))
 ci.cit <- data.frame(ci.cit)
 colnames(ci.cit) <- c("estimator", "ci025", "ci50", "ci975")
@@ -85,7 +85,7 @@ ci.cit <- ci.cit %>%
          ci50  = as.numeric(levels(ci50))[ci50],
          ci975 = as.numeric(levels(ci975))[ci975])
 ci.cit <- ci.cit %>%
-  mutate(estimator = factor(estimator, c("IPW-CIT", "G-CIT", "DR-CIT")))
+  mutate(estimator = factor(estimator, c("IPW-CIT", "g-CIT", "DR-CIT")))
 
 ci.cit <- ci.cit %>%
   gather(limit, value, ci025:ci975)
@@ -103,8 +103,8 @@ ggplot(ci.cit, aes(x = value, fill = estimator)) +
   xlab("Treatment effect") +
   scale_fill_manual(values = cbbPalette, 
                     name = "Algorithms", 
-                    breaks = c("IPW-CIT", "G-CIT", "DR-CIT"),
-                    labels = c("IPW-CIT", "G-CIT", "DR-CIT")) +
+                    breaks = c("IPW-CIT", "g-CIT", "DR-CIT"),
+                    labels = c("IPW-CIT", "g-CIT", "DR-CIT")) +
   theme(legend.position = "bottom") 
 
 # Lower, upper bounds of the treatment effect estimates in two terminal nodes 
@@ -147,3 +147,4 @@ ggplot(ci.frst.splt.cit, aes(x = value, fill = node)) +
                     name = "Node", 
                     breaks = c("P(survival) < 0.85", "P(survival) >= 0.85")) +
   theme(legend.position = "bottom") 
+

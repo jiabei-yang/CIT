@@ -69,8 +69,8 @@ colnames(scnrs.ct) <- c("Method", "setting", "algorithm")
 algorithm <- c("Alternative FTS")
 setting   <- c("Heterogeneous", "Homogeneous")
 Method   <- c("True IPW-CIT", "Mis Func IPW-CIT", "Unmeasured Cov IPW-CIT", 
-              "True G-CIT", "Mis Func G-CIT", "Unmeasured Cov G-CIT", 
-              "Both True DR-CIT", "True Out Mis Func Prop DR-CIT", "True Prop Mis Func Out DR-CIT", "Both Mis Func DR-CIT", "Both Unmeasured Cov DR-CIT")
+              "True g-CIT", "Mis Func g-CIT", "Unmeasured Cov g-CIT", 
+              "Both True DR-CIT", "True Out Mis Func Treat DR-CIT", "True Treat Mis Func Out DR-CIT", "Both Mis Func DR-CIT", "Both Unmeasured Cov DR-CIT")
 
 scnrs.cit <- expand.grid(Method, setting, algorithm)
 scnrs.cit <- scnrs.cit[c(1:3, 12:14, 4:6, 15:17, 7:11, 18:22), ]
@@ -85,18 +85,18 @@ performance.all <- cbind(scnrs[c(rep(1:nrow(scnrs.ct), each = 10^4),
 performance.all <- performance.all %>%
   mutate(Method    = factor(Method, c("Unmeasured Cov", "Mis Func", "True", 
                                       "Unmeasured Cov IPW-CIT", "Mis Func IPW-CIT", "True IPW-CIT", 
-                                      "Unmeasured Cov G-CIT", "Mis Func G-CIT", "True G-CIT", 
-                                      "Both Unmeasured Cov DR-CIT", "Both Mis Func DR-CIT", "True Prop Mis Func Out DR-CIT", "True Out Mis Func Prop DR-CIT", "Both True DR-CIT")),
+                                      "Unmeasured Cov g-CIT", "Mis Func g-CIT", "True g-CIT", 
+                                      "Both Unmeasured Cov DR-CIT", "Both Mis Func DR-CIT", "True Treat Mis Func Out DR-CIT", "True Out Mis Func Treat DR-CIT", "Both True DR-CIT")),
          setting   = factor(setting, c("Homogeneous", "Heterogeneous")),
          algorithm = factor(algorithm, c("Best CT", "Alternative FTS")))
 
 performance.all <- performance.all %>%
   mutate(est.mthd = ifelse(algorithm == "Best CT", "CT", NA)) %>%
   mutate(est.mthd = ifelse(grepl("IPW-CIT", Method), "IPW-CIT", est.mthd)) %>%
-  mutate(est.mthd = ifelse(grepl("G-CIT", Method), "G-CIT", est.mthd)) %>%
+  mutate(est.mthd = ifelse(grepl("g-CIT", Method), "g-CIT", est.mthd)) %>%
   mutate(est.mthd = ifelse(grepl("DR-CIT", Method), "DR-CIT", est.mthd))
 performance.all <- performance.all %>%
-  mutate(est.mthd = factor(est.mthd, c("CT", "IPW-CIT", "G-CIT", "DR-CIT")))
+  mutate(est.mthd = factor(est.mthd, c("CT", "IPW-CIT", "g-CIT", "DR-CIT")))
 
 # plot
 cbbPalette <- c("#999999", "#E69F00", "#56B4E9", "#009E73", "#0072B2", "#D55E00", "#CC79A7", "#F0E442")
@@ -136,13 +136,13 @@ summ.latex <- summ.latex %>%
   mutate(Method = sub("Heterogeneous ", "", Method))
 summ.latex <- summ.latex %>%
   mutate(Estimator = ifelse(grepl("IPW", Method), "IPW-CIT", NA)) %>%
-  mutate(Estimator = ifelse(grepl("G", Method), "G-CIT", Estimator)) %>%
+  mutate(Estimator = ifelse(grepl("g", Method), "g-CIT", Estimator)) %>%
   mutate(Estimator = ifelse(grepl("DR", Method), "DR-CIT", Estimator)) 
 summ.latex <- summ.latex %>%
   mutate(Method = sub("Alternative FTS", "", Method)) 
 summ.latex <- summ.latex %>%
   mutate(Method = sub(" IPW-CIT", "", Method)) %>%
-  mutate(Method = sub(" G-CIT", "", Method)) %>%
+  mutate(Method = sub(" g-CIT", "", Method)) %>%
   mutate(Method = sub(" DR-CIT", "", Method)) 
 # mutate(Method = sub(" CT", "", Method))
 summ.latex <- summ.latex[, c(7, 1:6)]
