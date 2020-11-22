@@ -42,7 +42,7 @@ colnames(performance.ct)
 colnames(performance.ct) <- gsub("hetero.propsc.true.nohonest.", "", colnames(performance.ct))
 
 # scenarios
-algorithm <- c("Original CT", "Best CT")
+algorithm <- c("Original CT", "Optimized CT")
 setting   <- c("Heterogeneous", "Homogeneous")
 Method    <- c("True", "Mis Func", "Unmeasured Cov")
 i_honest  <- c("Regular", "Honest")
@@ -59,7 +59,7 @@ performance.ct <- performance.ct %>%
   mutate(i_honest  = factor(i_honest, c("Regular", "Honest")),
          Method    = factor(Method, c("Unmeasured Cov", "Mis Func", "True")),
          setting   = factor(setting, c("Homogeneous", "Heterogeneous")),
-         algorithm = factor(algorithm, c("Original CT", "Best CT")))
+         algorithm = factor(algorithm, c("Original CT", "Optimized CT")))
 
 # plot
 cbbPalette <- c("#999999", "#E69F00", "#56B4E9", "#009E73", "#0072B2", "#D55E00", "#CC79A7", "#F0E442")
@@ -75,6 +75,7 @@ ggplot(performance.ct, aes(Method, mse)) +
   # scale_y_log10() +
   scale_colour_manual(values = cbbPalette, 
                       name = "Algorithms") + 
-  theme(legend.position = "bottom")
+  theme(legend.position = "bottom",
+        strip.background = element_rect(fill = NA))
 
 

@@ -36,7 +36,7 @@ colnames(performance.all)
 colnames(performance.all) <- gsub("hetero.propsc.true.nohonest.", "", colnames(performance.all))
 
 # scenarios
-algorithm <- c("Best CT")
+algorithm <- c("Optimized CT")
 setting   <- c("Heterogeneous", "Homogeneous")
 Method    <- c("True", "Mis Func", "Unmeasured Cov")
 
@@ -60,10 +60,10 @@ performance.all <- performance.all %>%
   mutate(Method    = factor(Method, c("Unmeasured Cov", "Mis Func", "True", 
                                       "Unmeasured Cov DR-CIT", "DR-CIT")),
          setting   = factor(setting, c("Homogeneous", "Heterogeneous")),
-         algorithm = factor(algorithm, c("Best CT", "Main FTS", "Alternative FTS")))
+         algorithm = factor(algorithm, c("Optimized CT", "Main FTS", "Alternative FTS")))
 
 performance.all <- performance.all %>%
-  mutate(est.mthd = ifelse(algorithm == "Best CT", "CT", NA)) %>%
+  mutate(est.mthd = ifelse(algorithm == "Optimized CT", "CT", NA)) %>%
   mutate(est.mthd = ifelse(grepl("DR-CIT", Method), "DR-CIT", est.mthd))
 performance.all <- performance.all %>%
   mutate(est.mthd = factor(est.mthd, c("CT", "DR-CIT")))
@@ -96,9 +96,9 @@ for (i in c(5, 8, 9:11)) {
   
 }
 colnames(summ.select) <- colnames(performance.all)[c(5, 8, 9:11)]
-summ.select <- summ.select[c(c(2, 1) + 7 + 5,
+summ.select <- summ.select[c(c(2, 1) + 7 + 2,
                              c(2, 1) + 7,
-                             c(2, 1) + 5,
+                             c(2, 1) + 2,
                              c(2, 1)), ]
 round(summ.select, 2)
 

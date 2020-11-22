@@ -2,6 +2,7 @@ library(ggplot2)
 library(dplyr)
 library(tidyr)
 library(xtable)
+library(grid)
 
 # best ct
 load("../Data/main/CausalTreeBest.RData")
@@ -81,7 +82,7 @@ colnames(performance.all)
 colnames(performance.all) <- gsub("hetero.propsc.true.nohonest.", "", colnames(performance.all))
 
 # scenarios
-algorithm <- c("Best CT")
+algorithm <- c("Optimized CT")
 setting   <- c("Heterogeneous", "Homogeneous")
 Method    <- c("True", "Mis Func", "Unmeasured Cov")
 
@@ -111,10 +112,10 @@ performance.all <- performance.all %>%
                                       "Unmeasured Cov g-CIT", "Mis Func g-CIT", "True g-CIT", 
                                       "Both Unmeasured Cov DR-CIT", "Both Mis Func DR-CIT", "True Treat Mis Func Out DR-CIT", "True Out Mis Func Treat DR-CIT", "Both True DR-CIT")),
          setting   = factor(setting, c("Homogeneous", "Heterogeneous")),
-         algorithm = factor(algorithm, c("Best CT", "Main FTS", "Alternative FTS")))
+         algorithm = factor(algorithm, c("Optimized CT", "Main FTS", "Alternative FTS")))
 
 performance.all <- performance.all %>%
-  mutate(est.mthd = ifelse(algorithm == "Best CT", "CT", NA)) %>%
+  mutate(est.mthd = ifelse(algorithm == "Optimized CT", "CT", NA)) %>%
   mutate(est.mthd = ifelse(grepl("IPW-CIT", Method), "IPW-CIT", est.mthd)) %>%
   mutate(est.mthd = ifelse(grepl("g-CIT", Method), "g-CIT", est.mthd)) %>%
   mutate(est.mthd = ifelse(grepl("DR-CIT", Method), "DR-CIT", est.mthd))
@@ -125,7 +126,7 @@ performance.all <- performance.all %>%
 cbbPalette <- c("#999999", "#E69F00", "#56B4E9", "#009E73", "#0072B2", "#D55E00", "#CC79A7", "#F0E442")
 
 # Figure S4
-ggplot(performance.all, aes(Method, mse)) +
+p <- ggplot(performance.all, aes(Method, mse)) +
   geom_boxplot(outlier.size = 0.6, aes(color = est.mthd)) + 
   ylab("MSE") + 
   ggtitle("When models are fitted using the whole dataset") +
@@ -137,6 +138,13 @@ ggplot(performance.all, aes(Method, mse)) +
   scale_colour_manual(values = cbbPalette, 
                       name = "Algorithms") + 
   theme(legend.position = "bottom")
+g         <- ggplot_gtable(ggplot_build(p))
+strip_x   <- which(grepl('strip-t', g$layout$name))
+
+l <- which(grepl('text', g$grobs[[strip_x[1]]]$grobs[[1]]$childrenOrder))
+g$grobs[[strip_x[1]]]$grobs[[1]]$children[[l]]$children[[1]]$gp$fontsize <- 8
+
+grid.draw(g)
 
 # Table S4
 summ.select <- NULL
@@ -148,9 +156,9 @@ for (i in c(5, 8:11)) {
   
 }
 colnames(summ.select) <- colnames(performance.all)[c(5, 8:11)]
-summ.select <- summ.select[c(c(c(11, 5, 7), c(11, 5, 7) - 1, c(3, 1, 9, 8, 2)) + 14 + 11 + 14,
+summ.select <- summ.select[c(c(c(11, 5, 7), c(11, 5, 7) - 1, c(3, 1, 9, 8, 2)) + 14 + 11 + 11,
                              c(c(11, 5, 7), c(11, 5, 7) - 1, c(3, 1, 9, 8, 2)) + 14 + 11,
-                             c(c(11, 5, 7), c(11, 5, 7) - 1, c(3, 1, 9, 8, 2)) + 14,
+                             c(c(11, 5, 7), c(11, 5, 7) - 1, c(3, 1, 9, 8, 2)) + 11,
                              c(c(11, 5, 7), c(11, 5, 7) - 1, c(3, 1, 9, 8, 2))), ]
 round(summ.select, 2)
 
@@ -261,7 +269,7 @@ colnames(performance.all)
 colnames(performance.all) <- gsub("hetero.propsc.true.nohonest.", "", colnames(performance.all))
 
 # scenarios
-algorithm <- c("Best CT")
+algorithm <- c("Optimized CT")
 setting   <- c("Heterogeneous", "Homogeneous")
 Method    <- c("True", "Mis Func", "Unmeasured Cov")
 
@@ -291,10 +299,10 @@ performance.all <- performance.all %>%
                                       "Unmeasured Cov g-CIT", "Mis Func g-CIT", "True g-CIT", 
                                       "Both Unmeasured Cov DR-CIT", "Both Mis Func DR-CIT", "True Treat Mis Func Out DR-CIT", "True Out Mis Func Treat DR-CIT", "Both True DR-CIT")),
          setting   = factor(setting, c("Homogeneous", "Heterogeneous")),
-         algorithm = factor(algorithm, c("Best CT", "Main FTS", "Alternative FTS")))
+         algorithm = factor(algorithm, c("Optimized CT", "Main FTS", "Alternative FTS")))
 
 performance.all <- performance.all %>%
-  mutate(est.mthd = ifelse(algorithm == "Best CT", "CT", NA)) %>%
+  mutate(est.mthd = ifelse(algorithm == "Optimized CT", "CT", NA)) %>%
   mutate(est.mthd = ifelse(grepl("IPW-CIT", Method), "IPW-CIT", est.mthd)) %>%
   mutate(est.mthd = ifelse(grepl("g-CIT", Method), "g-CIT", est.mthd)) %>%
   mutate(est.mthd = ifelse(grepl("DR-CIT", Method), "DR-CIT", est.mthd))
@@ -305,7 +313,7 @@ performance.all <- performance.all %>%
 cbbPalette <- c("#999999", "#E69F00", "#56B4E9", "#009E73", "#0072B2", "#D55E00", "#CC79A7", "#F0E442")
 
 # Figure S5
-ggplot(performance.all, aes(Method, mse)) +
+p <- ggplot(performance.all, aes(Method, mse)) +
   geom_boxplot(outlier.size = 0.6, aes(color = est.mthd)) + 
   ylab("MSE") + 
   ggtitle("When models are fitted separately within each child node") +
@@ -317,6 +325,13 @@ ggplot(performance.all, aes(Method, mse)) +
   scale_colour_manual(values = cbbPalette, 
                       name = "Algorithms") + 
   theme(legend.position = "bottom")
+g         <- ggplot_gtable(ggplot_build(p))
+strip_x   <- which(grepl('strip-t', g$layout$name))
+
+l <- which(grepl('text', g$grobs[[strip_x[1]]]$grobs[[1]]$childrenOrder))
+g$grobs[[strip_x[1]]]$grobs[[1]]$children[[l]]$children[[1]]$gp$fontsize <- 8
+
+grid.draw(g)
 
 # Table S5
 summ.select <- NULL
@@ -328,9 +343,9 @@ for (i in c(5, 8:11)) {
   
 }
 colnames(summ.select) <- colnames(performance.all)[c(5, 8:11)]
-summ.select <- summ.select[c(c(c(11, 5, 7), c(11, 5, 7) - 1, c(3, 1, 9, 8, 2)) + 14 + 11 + 14,
+summ.select <- summ.select[c(c(c(11, 5, 7), c(11, 5, 7) - 1, c(3, 1, 9, 8, 2)) + 14 + 11 + 11,
                              c(c(11, 5, 7), c(11, 5, 7) - 1, c(3, 1, 9, 8, 2)) + 14 + 11,
-                             c(c(11, 5, 7), c(11, 5, 7) - 1, c(3, 1, 9, 8, 2)) + 14,
+                             c(c(11, 5, 7), c(11, 5, 7) - 1, c(3, 1, 9, 8, 2)) + 11,
                              c(c(11, 5, 7), c(11, 5, 7) - 1, c(3, 1, 9, 8, 2))), ]
 round(summ.select, 2)
 

@@ -76,7 +76,7 @@ colnames(performance.all)
 colnames(performance.all) <- gsub("hetero.propsc.true.nohonest.", "", colnames(performance.all))
 
 # scenarios
-algorithm <- c("Original CT", "Best CT")
+algorithm <- c("Original CT", "Optimized CT")
 setting   <- c("Heterogeneous", "Homogeneous")
 Method    <- c("True", "Mis Func", "Unmeasured Cov")
 
@@ -104,7 +104,7 @@ performance.all <- performance.all %>%
                                       "Unmeasured Cov g-CIT", "Mis Func g-CIT", "True g-CIT", 
                                       "Both Unmeasured Cov DR-CIT", "Both Mis Func DR-CIT", "True Treat Mis Func Out DR-CIT", "True Out Mis Func Treat DR-CIT", "Both True DR-CIT")),
          setting   = factor(setting, c("Homogeneous", "Heterogeneous")),
-         algorithm = factor(algorithm, c("Original CT", "Best CT", "Causal Interaction Tree (CIT)")))
+         algorithm = factor(algorithm, c("Original CT", "Optimized CT", "Causal Interaction Tree (CIT)")))
 
 # plot
 range(performance.all$mse)
@@ -129,8 +129,8 @@ for (i in c(5, 8, 9, 11)) {
   
 }
 colnames(summ.select) <- colnames(performance.all)[c(5, 8, 9, 11)]
-summ.select <- summ.select[c(c(c(17, 15, 16), c(3, 1, 2), c(14, 8, 10), c(14, 8, 10) - 1, c(6, 4, 12, 11, 5)) + 17, 
-                             c(c(17, 15, 16), c(3, 1, 2), c(14, 8, 10), c(14, 8, 10) - 1, c(6, 4, 12, 11, 5))), ]
+summ.select <- summ.select[c(c(c(17, 15, 16), c(3, 1, 2) + 11, c(14, 8, 10) - 3, c(14, 8, 10) - 3 - 1, c(6, 4, 12, 11, 5) - 3) + 17, 
+                             c(c(17, 15, 16), c(3, 1, 2) + 11, c(14, 8, 10) - 3, c(14, 8, 10) - 3 - 1, c(6, 4, 12, 11, 5) - 3)), ]
 round(summ.select, 2)
 
 # Generate the Latex code
@@ -144,11 +144,11 @@ summ.latex <- summ.latex %>%
   mutate(Estimator = ifelse(grepl("g", Method), "g-CIT", Estimator)) %>%
   mutate(Estimator = ifelse(grepl("DR", Method), "DR-CIT", Estimator)) %>%
   mutate(Estimator = ifelse(grepl("Original CT", Method), "Original CT", Estimator)) %>%
-  mutate(Estimator = ifelse(grepl("Best CT", Method), "Best CT", Estimator))
+  mutate(Estimator = ifelse(grepl("Optimized CT", Method), "Optimized CT", Estimator))
 summ.latex <- summ.latex %>%
   mutate(Method = sub("Causal Interaction Tree \\(CIT\\)", "", Method)) %>%
   mutate(Method = sub("Original CT", "", Method)) %>%
-  mutate(Method = sub("Best CT", "", Method))
+  mutate(Method = sub("Optimized CT", "", Method))
 summ.latex <- summ.latex %>%
   mutate(Method = sub(" IPW-CIT", "", Method)) %>%
   mutate(Method = sub(" g-CIT", "", Method)) %>%
@@ -173,8 +173,8 @@ for (i in c(10)) {
   
 }
 colnames(summ.select) <- colnames(performance.all)[10]
-summ.select <- summ.select[c(c(c(17, 15, 16), c(3, 1, 2), c(14, 8, 10), c(14, 8, 10) - 1, c(6, 4, 12, 11, 5)) + 17, 
-                             c(c(17, 15, 16), c(3, 1, 2), c(14, 8, 10), c(14, 8, 10) - 1, c(6, 4, 12, 11, 5))), ]
+summ.select <- summ.select[c(c(c(17, 15, 16), c(3, 1, 2) + 11, c(14, 8, 10) - 3, c(14, 8, 10) - 3 - 1, c(6, 4, 12, 11, 5) - 3) + 17, 
+                             c(c(17, 15, 16), c(3, 1, 2) + 11, c(14, 8, 10) - 3, c(14, 8, 10) - 3 - 1, c(6, 4, 12, 11, 5) - 3)), ]
 round(summ.select, 2)
 
 # Generate the Latex code
@@ -188,11 +188,11 @@ summ.latex <- summ.latex %>%
   mutate(Estimator = ifelse(grepl("g", Method), "g-CIT", Estimator)) %>%
   mutate(Estimator = ifelse(grepl("DR", Method), "DR-CIT", Estimator)) %>%
   mutate(Estimator = ifelse(grepl("Original CT", Method), "Original CT", Estimator)) %>%
-  mutate(Estimator = ifelse(grepl("Best CT", Method), "Best CT", Estimator))
+  mutate(Estimator = ifelse(grepl("Optimized CT", Method), "Optimized CT", Estimator))
 summ.latex <- summ.latex %>%
   mutate(Method = sub("Causal Interaction Tree \\(CIT\\)", "", Method)) %>%
   mutate(Method = sub("Original CT", "", Method)) %>%
-  mutate(Method = sub("Best CT", "", Method))
+  mutate(Method = sub("Optimized CT", "", Method))
 summ.latex <- summ.latex %>%
   mutate(Method = sub(" IPW-CIT", "", Method)) %>%
   mutate(Method = sub(" g-CIT", "", Method)) %>%

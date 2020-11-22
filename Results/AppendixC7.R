@@ -2,6 +2,7 @@ library(ggplot2)
 library(dplyr)
 library(tidyr)
 library(xtable)
+library(grid)
 
 load("../Data/AppendixC7/BinCausalTreeSettings.RData")
 
@@ -131,7 +132,7 @@ colnames(performance.ct)
 colnames(performance.ct) <- gsub("hetero.propsc.true.nohonest.", "", colnames(performance.ct))
 
 # scenarios
-algorithm <- c("Original CT", "Best CT")
+algorithm <- c("Original CT", "Optimized CT")
 setting   <- c("Heterogeneous", "Homogeneous")
 Method    <- c("True", "Mis Func", "Unmeasured Cov")
 i_honest  <- c("Regular", "Honest")
@@ -148,7 +149,7 @@ performance.ct <- performance.ct %>%
   mutate(i_honest  = factor(i_honest, c("Regular", "Honest")),
          Method    = factor(Method, c("Unmeasured Cov", "Mis Func", "True")),
          setting   = factor(setting, c("Homogeneous", "Heterogeneous")),
-         algorithm = factor(algorithm, c("Original CT", "Best CT")))
+         algorithm = factor(algorithm, c("Original CT", "Optimized CT")))
 
 # plot
 cbbPalette <- c("#999999", "#E69F00", "#56B4E9", "#009E73", "#0072B2", "#D55E00", "#CC79A7", "#F0E442")
@@ -260,7 +261,7 @@ colnames(performance.all)
 colnames(performance.all) <- gsub("hetero.propsc.true.nohonest.", "", colnames(performance.all))
 
 # scenarios
-algorithm <- c("Original CT", "Best CT")
+algorithm <- c("Original CT", "Optimized CT")
 setting   <- c("Heterogeneous", "Homogeneous")
 Method    <- c("True", "Mis Func", "Unmeasured Cov")
 
@@ -289,10 +290,10 @@ performance.all <- performance.all %>%
                                       "Unmeasured Cov g-CIT", "Mis Func g-CIT", "True g-CIT", 
                                       "Both Unmeasured Cov DR-CIT", "Both Mis Func DR-CIT", "True Treat Mis Func Out DR-CIT", "True Out Mis Func Treat DR-CIT", "Both True DR-CIT")),
          setting   = factor(setting, c("Homogeneous", "Heterogeneous")),
-         algorithm = factor(algorithm, c("Original CT", "Best CT", "Main FTS", "Alternative FTS")))
+         algorithm = factor(algorithm, c("Original CT", "Optimized CT", "Main FTS", "Alternative FTS")))
 
 performance.all <- performance.all %>%
-  mutate(est.mthd = ifelse(algorithm %in% c("Original CT", "Best CT"), "CT", NA)) %>%
+  mutate(est.mthd = ifelse(algorithm %in% c("Original CT", "Optimized CT"), "CT", NA)) %>%
   mutate(est.mthd = ifelse(grepl("IPW-CIT", Method), "IPW-CIT", est.mthd)) %>%
   mutate(est.mthd = ifelse(grepl("g-CIT", Method), "g-CIT", est.mthd)) %>%
   mutate(est.mthd = ifelse(grepl("DR-CIT", Method), "DR-CIT", est.mthd))
@@ -303,7 +304,7 @@ performance.all <- performance.all %>%
 cbbPalette <- c("#999999", "#E69F00", "#56B4E9", "#009E73", "#0072B2", "#D55E00", "#CC79A7", "#F0E442")
 
 # Figure S7
-ggplot(performance.all, aes(Method, mse)) +
+p <- ggplot(performance.all, aes(Method, mse)) +
   geom_boxplot(outlier.size = 0.6, aes(color = est.mthd)) + 
   ylab("MSE") + 
   ggtitle("Binary outcome with both continuous and categorical covariates") +
@@ -317,6 +318,13 @@ ggplot(performance.all, aes(Method, mse)) +
                       breaks = c("CT", "IPW-CIT", "g-CIT", "DR-CIT"),
                       labels = c("CT", "IPW-CIT", "g-CIT", "DR-CIT")) + 
   theme(legend.position = "bottom")
+g         <- ggplot_gtable(ggplot_build(p))
+strip_x   <- which(grepl('strip-t', g$layout$name))
+
+l <- which(grepl('text', g$grobs[[strip_x[2]]]$grobs[[1]]$childrenOrder))
+g$grobs[[strip_x[2]]]$grobs[[1]]$children[[l]]$children[[1]]$gp$fontsize <- 8
+
+grid.draw(g)
 
 # Table S7
 summ.select <- NULL
@@ -329,12 +337,12 @@ for (i in c(5, 8, 9:11)) {
 }
 colnames(summ.select) <- colnames(performance.all)[c(5, 8, 9:11)]
 summ.select <- summ.select[c(c(3, 1, 2) + 28 + 25,
-                             c(3, 1, 2) + 28 + 11,
-                             c(c(11, 5, 7), c(11, 5, 7) - 1, c(3, 1, 9, 8, 2)) + 28 + 11 + 3,
+                             c(3, 1, 2) + 28 + 22,
+                             c(c(11, 5, 7), c(11, 5, 7) - 1, c(3, 1, 9, 8, 2)) + 28 + 11,
                              c(c(11, 5, 7), c(11, 5, 7) - 1, c(3, 1, 9, 8, 2)) + 28,
                              c(3, 1, 2) + 22 + 3,
-                             c(3, 1, 2) + 11,
-                             c(c(11, 5, 7), c(11, 5, 7) - 1, c(3, 1, 9, 8, 2)) + 14,
+                             c(3, 1, 2) + 22,
+                             c(c(11, 5, 7), c(11, 5, 7) - 1, c(3, 1, 9, 8, 2)) + 11,
                              c(c(11, 5, 7), c(11, 5, 7) - 1, c(3, 1, 9, 8, 2))), ]
 round(summ.select, 2)
 
@@ -346,13 +354,13 @@ summ.latex <- summ.latex %>%
   mutate(Method = sub("Heterogeneous ", "", Method))
 summ.latex <- summ.latex %>%
   mutate(Estimator = ifelse(grepl("Original CT", Method), "Original CT", NA)) %>%
-  mutate(Estimator = ifelse(grepl("Best CT", Method), "Best CT", Estimator)) %>%
+  mutate(Estimator = ifelse(grepl("Optimized CT", Method), "Optimized CT", Estimator)) %>%
   mutate(Estimator = ifelse(grepl("IPW", Method), "IPW-CIT", Estimator)) %>%
-  mutate(Estimator = ifelse(grepl("g", Method), "g-CIT", Estimator)) %>%
+  mutate(Estimator = ifelse((grepl("g", Method)) & is.na(Estimator), "g-CIT", Estimator)) %>%
   mutate(Estimator = ifelse(grepl("DR", Method), "DR-CIT", Estimator)) 
 summ.latex <- summ.latex %>%
   mutate(Method = sub("Original CT", "", Method)) %>%
-  mutate(Method = sub("Best CT", "", Method)) %>%
+  mutate(Method = sub("Optimized CT", "", Method)) %>%
   mutate(Method = sub("Main FTS", "", Method)) %>%
   mutate(Method = sub("Alternative FTS", "", Method))
 summ.latex <- summ.latex %>%

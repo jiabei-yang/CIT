@@ -59,7 +59,7 @@ colnames(performance.all)
 colnames(performance.all) <- gsub("hetero.propsc.true.nohonest.", "", colnames(performance.all))
 
 # scenarios
-algorithm <- c("Best CT")
+algorithm <- c("Optimized CT")
 setting   <- c("Heterogeneous", "Homogeneous")
 Method    <- c("True", "Mis Func", "Unmeasured Cov")
 
@@ -88,10 +88,10 @@ performance.all <- performance.all %>%
                                       "Unmeasured Cov g-CIT", "Mis Func g-CIT", "True g-CIT", 
                                       "Both Unmeasured Cov DR-CIT", "Both Mis Func DR-CIT", "True Treat Mis Func Out DR-CIT", "True Out Mis Func Treat DR-CIT", "Both True DR-CIT")),
          setting   = factor(setting, c("Homogeneous", "Heterogeneous")),
-         algorithm = factor(algorithm, c("Best CT", "Alternative FTS")))
+         algorithm = factor(algorithm, c("Optimized CT", "Alternative FTS")))
 
 performance.all <- performance.all %>%
-  mutate(est.mthd = ifelse(algorithm == "Best CT", "CT", NA)) %>%
+  mutate(est.mthd = ifelse(algorithm == "Optimized CT", "CT", NA)) %>%
   mutate(est.mthd = ifelse(grepl("IPW-CIT", Method), "IPW-CIT", est.mthd)) %>%
   mutate(est.mthd = ifelse(grepl("g-CIT", Method), "g-CIT", est.mthd)) %>%
   mutate(est.mthd = ifelse(grepl("DR-CIT", Method), "DR-CIT", est.mthd))
