@@ -290,7 +290,9 @@ ci.frst.splt.cit <-
               dr.trt.eff.r <- mean(rhc.model.est.used.r$A * (rhc.model.est.used.r$Y - est.cond.eff.1.r) / propsc.r + est.cond.eff.1.r) - 
                 mean((1 - rhc.model.est.used.r$A) * (rhc.model.est.used.r$Y - est.cond.eff.0.r) / (1 - propsc.r) + est.cond.eff.0.r)
               
-              trt.eff <- rbind(trt.eff, c(ipw.trt.eff.l, ipw.trt.eff.r, g.trt.eff.l, g.trt.eff.r, dr.trt.eff.l, dr.trt.eff.r))
+              trt.eff <- rbind(trt.eff, c(ipw.trt.eff.l, ipw.trt.eff.r, ipw.trt.eff.l - ipw.trt.eff.r, 
+                                          g.trt.eff.l, g.trt.eff.r, g.trt.eff.l - g.trt.eff.r,
+                                          dr.trt.eff.l, dr.trt.eff.r, dr.trt.eff.l - dr.trt.eff.r))
               
               if ((boot.i %% 100) == 0) {print(i)}
               

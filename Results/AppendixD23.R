@@ -111,9 +111,9 @@ ggplot(ci.cit, aes(x = value, fill = estimator)) +
 load("../Data/AppendixD3/RhcSpltFrstSpltCi.RData")
 ci.frst.splt.cit <- data.frame(ci.frst.splt.cit)
 colnames(ci.frst.splt.cit) <- c("include",
-                                paste0(rep(c("ipw_", "g_", "dr_"), each = 3 * 2), 
-                                       rep(rep(c("l_", "r_"), each = 3), 3), 
-                                       rep(rep(c("025", "50", "975"), 2), 3)))
+                                paste0(rep(c("ipw_", "g_", "dr_"), each = 3 * 3), 
+                                       rep(rep(c("l_", "r_", "diff_"), each = 3), 3), 
+                                       rep(rep(c("025", "50", "975"), 3), 3)))
 ci.frst.splt.cit <- ci.frst.splt.cit %>%
   filter(include == 1) %>%
   select(starts_with("dr"))
@@ -121,7 +121,8 @@ ci.frst.splt.cit <- ci.frst.splt.cit %>%
 apply(ci.frst.splt.cit, 2, median)
 apply(ci.frst.splt.cit, 2, mean)
 
-
+ci.frst.splt.cit <- ci.frst.splt.cit %>%
+  dplyr::select(-dr_diff_025, -dr_diff_50, -dr_diff_975)
 ci.frst.splt.cit <- ci.frst.splt.cit %>%
   gather(limit, value)
 ci.frst.splt.cit <- ci.frst.splt.cit %>%
