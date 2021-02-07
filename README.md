@@ -1,6 +1,6 @@
 # Causal Interaction Trees
 
-Code for paper "Causal Interaction Trees: Finding Subgroups with Heterogeneous Treatment Effects in Observational Data" ([arXiv link](https://arxiv.org/abs/2003.03042)).
+Code for paper [Yang, J., Dahabreh, I. J., & Steingrimsson, J. A. Causal interaction trees: Finding subgroups with heterogeneous treatment effects in observational data. Biometrics.](https://doi.org/10.1111/biom.13432).
 
 * `main/`: code for simulations and data analysis in the main manuscript.
   * Simulations:
